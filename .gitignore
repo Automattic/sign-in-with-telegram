@@ -10,6 +10,7 @@ node_modules/
 
 # Local dev environment.
 .wp-env/
+.wp-env.override.json
 
 # Logs.
 *.log

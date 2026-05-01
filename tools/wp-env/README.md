@@ -23,18 +23,26 @@ The plugin lives at `wp-content/plugins/telegram-auth/` inside the container, mo
 
 ## Wiring the OIDC flow
 
-The mu-plugin at `tools/wp-env/mu-plugin.php` (mounted into `wp-content/mu-plugins/` automatically) reads two environment variables and defines them as PHP constants:
-
-- `TELEGRAM_AUTH_CLIENT_ID`
-- `TELEGRAM_AUTH_CLIENT_SECRET`
-
-Export them in your shell **before** running `npm run env:start` (wp-env reads them once when starting):
+Bot credentials are injected as PHP constants via wp-env's standard override mechanism — `.wp-env.override.json`, which wp-env merges over `.wp-env.json` on every start.
 
 ```bash
-export TELEGRAM_AUTH_CLIENT_ID=123456789
-export TELEGRAM_AUTH_CLIENT_SECRET=your-bot-oidc-secret
+cp .wp-env.override.json.example .wp-env.override.json
+# edit .wp-env.override.json
 npm run env:start
 ```
+
+Fill in the values from BotFather → **Bot Settings → Web Login**:
+
+```json
+{
+	"config": {
+		"TELEGRAM_AUTH_CLIENT_ID": "123456789",
+		"TELEGRAM_AUTH_CLIENT_SECRET": "your-bot-oidc-secret"
+	}
+}
+```
+
+`.wp-env.override.json` is gitignored. `.wp-env.override.json.example` is committed as the template.
 
 In BotFather, register your local redirect URI as:
 
@@ -42,10 +50,10 @@ In BotFather, register your local redirect URI as:
 http://localhost:8888/wp-login.php?action=telegram_auth_callback
 ```
 
-If you start the stack without those vars set, the plugin still loads — it just shows a "not configured" admin notice, which is the correct dev UX until you supply credentials.
+If you start the stack without the override file, the plugin still loads — it just shows a "not configured" admin notice, which is the correct dev UX until you supply credentials.
 
 ## Companion scripts
 
 - `npm run env:stop` — stop the containers (state preserved).
-- `npm run env:reset` — destroy and recreate the stack (use after a major schema change).
+- `npm run env:reset` — destroy and recreate the stack (use after a major schema change, or after editing `.wp-env.override.json`).
 - `npm run env:logs` — tail container logs.

@@ -7,8 +7,5 @@
 		"WP_DEBUG_LOG": true,
 		"WP_DEBUG_DISPLAY": false,
 		"SCRIPT_DEBUG": true
-	},
-	"mappings": {
-		"wp-content/mu-plugins/telegram-auth-dev.php": "./tools/wp-env/mu-plugin.php"
 	}
 }

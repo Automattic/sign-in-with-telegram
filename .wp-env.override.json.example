@@ -1,0 +1,7 @@
+{
+	"$schema": "Copy this file to .wp-env.override.json (gitignored) and fill in your bot's OIDC credentials. wp-env merges this over .wp-env.json on every start. The values in `config` become PHP constants available to the plugin.",
+	"config": {
+		"TELEGRAM_AUTH_CLIENT_ID": "",
+		"TELEGRAM_AUTH_CLIENT_SECRET": ""
+	}
+}
