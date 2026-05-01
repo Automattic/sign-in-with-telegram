@@ -1,6 +1,7 @@
 # Build outputs — produced fresh in CI before deploy.
 build/
 packages/*/build/
+packages/*/build-module/
 **/*.map
 
 # Dependency installs.
