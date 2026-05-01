@@ -6,7 +6,6 @@
 	<file>tests/php</file>
 	<file>telegram-auth.php</file>
 	<file>uninstall.php</file>
-	<file>tools</file>
 
 	<arg value="sp"/>
 	<arg name="extensions" value="php"/>
