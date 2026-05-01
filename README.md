@@ -6,7 +6,7 @@ A WordPress plugin built around Telegram's OpenID Connect login. See [`readme.tx
 
 ## Local development
 
-Requirements: Docker, Node 20+, PHP 8.1+, Composer.
+Requirements: Docker, Node 24+, PHP 8.1+, Composer.
 
 ```bash
 composer install
