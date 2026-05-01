@@ -2,6 +2,7 @@
 	"core": null,
 	"phpVersion": "8.1",
 	"plugins": [ "." ],
+	"testsEnvironment": false,
 	"config": {
 		"WP_DEBUG": true,
 		"WP_DEBUG_LOG": true,
