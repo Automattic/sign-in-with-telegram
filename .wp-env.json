@@ -1,7 +1,7 @@
 {
 	"core": null,
 	"phpVersion": "8.1",
-	"plugins": [ ".", "WordPress/gutenberg" ],
+	"plugins": [ ".", "https://downloads.wordpress.org/plugin/gutenberg.zip" ],
 	"testsEnvironment": false,
 	"config": {
 		"WP_DEBUG": true,
