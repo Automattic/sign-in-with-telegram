@@ -11,16 +11,15 @@
 
 defined( 'ABSPATH' ) || exit;
 
-if ( ! defined( 'TELEGRAM_AUTH_CLIENT_ID' ) ) {
-	$client_id = getenv( 'TELEGRAM_AUTH_CLIENT_ID' );
-	if ( false !== $client_id && '' !== $client_id ) {
-		define( 'TELEGRAM_AUTH_CLIENT_ID', $client_id );
+( static function (): void {
+	foreach ( array( 'TELEGRAM_AUTH_CLIENT_ID', 'TELEGRAM_AUTH_CLIENT_SECRET' ) as $name ) {
+		if ( defined( $name ) ) {
+			continue;
+		}
+		$value = getenv( $name );
+		if ( false !== $value && '' !== $value ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.VariableConstantNameFound -- Names are hard-coded above and all carry the TELEGRAM_AUTH_ prefix.
+			define( $name, $value );
+		}
 	}
-}
-
-if ( ! defined( 'TELEGRAM_AUTH_CLIENT_SECRET' ) ) {
-	$client_secret = getenv( 'TELEGRAM_AUTH_CLIENT_SECRET' );
-	if ( false !== $client_secret && '' !== $client_secret ) {
-		define( 'TELEGRAM_AUTH_CLIENT_SECRET', $client_secret );
-	}
-}
+} )();
