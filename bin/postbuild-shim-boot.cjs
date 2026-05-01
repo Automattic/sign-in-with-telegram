@@ -27,12 +27,12 @@ const repoRoot = path.resolve( __dirname, '..' );
 const targetDir = path.join( repoRoot, 'build', 'modules', 'boot' );
 const targetFile = path.join( targetDir, 'index.min.asset.php' );
 
-// Script handles @wordpress/boot needs at runtime, derived from its
-// package.json dependencies. wp-base-styles is a style, not a script —
-// the page template enqueues styles separately. Newer handles
-// (wp-admin-ui, wp-lazy-editor, wp-route, wp-theme, wp-private-apis)
-// are registered by Gutenberg; the page falls back gracefully when a
-// handle is unknown.
+// Classic-script handles to load before the inline `import("@wordpress/boot")`.
+// Listing a handle that isn't registered as a classic script causes WP to
+// silently refuse to print the prerequisites script at runtime — verified
+// empirically with Gutenberg active. The script-module-only counterparts
+// (wp-icons, wp-lazy-editor, wp-route) resolve via the import map at JS
+// runtime and don't belong here. wp-base-styles is a style, not a script.
 const dependencies = [
 	'react-jsx-runtime',
 	'wp-a11y',
@@ -46,14 +46,11 @@ const dependencies = [
 	'wp-element',
 	'wp-html-entities',
 	'wp-i18n',
-	'wp-icons',
 	'wp-keyboard-shortcuts',
 	'wp-keycodes',
-	'wp-lazy-editor',
 	'wp-notices',
 	'wp-primitives',
 	'wp-private-apis',
-	'wp-route',
 	'wp-theme',
 	'wp-url',
 ];
@@ -72,4 +69,6 @@ fs.mkdirSync( targetDir, { recursive: true } );
 fs.writeFileSync( targetFile, phpContent );
 
 const rel = path.relative( repoRoot, targetFile );
-process.stdout.write( `   ✔ Stubbed ${ rel } (${ dependencies.length } deps)\n` );
+process.stdout.write(
+	`   ✔ Stubbed ${ rel } (${ dependencies.length } deps)\n`
+);
