@@ -11,7 +11,7 @@
 		"url": "git+https://github.com/Automattic/telegram-auth.git"
 	},
 	"scripts": {
-		"build": "wp-build",
+		"build": "wp-build && node bin/postbuild-shim-boot.cjs",
 		"dev": "wp-build --watch",
 		"env:start": "wp-env start",
 		"env:stop": "wp-env stop",
