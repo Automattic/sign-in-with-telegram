@@ -3,7 +3,8 @@
 		"target": "ES2022",
 		"module": "ESNext",
 		"moduleResolution": "Bundler",
-		"jsx": "react",
+		"jsx": "react-jsx",
+		"jsxImportSource": "react",
 		"strict": true,
 		"esModuleInterop": true,
 		"resolveJsonModule": true,
@@ -14,6 +15,6 @@
 		"forceConsistentCasingInFileNames": true,
 		"types": [ "jest" ]
 	},
-	"include": [ "packages/*/src/**/*" ],
-	"exclude": [ "node_modules", "build", "build-module" ]
+	"include": [ "routes/**/*", "packages/*/src/**/*" ],
+	"exclude": [ "node_modules", "build", "build-module", "packages/*/build", "packages/*/build-module" ]
 }

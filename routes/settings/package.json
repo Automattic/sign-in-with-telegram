@@ -1,0 +1,11 @@
+{
+	"name": "@telegram-auth/route-settings",
+	"version": "0.1.0",
+	"private": true,
+	"license": "GPL-2.0-or-later",
+	"description": "Default route for the Telegram Auth settings page.",
+	"route": {
+		"path": "/",
+		"page": "settings"
+	}
+}
