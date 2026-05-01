@@ -1,0 +1,22 @@
+; EditorConfig — https://editorconfig.org/
+; Matches the WordPress coding standards: tabs in PHP / JS, 2-space
+; in JSON / YAML, LF line endings, trim trailing whitespace.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{php,js,jsx,ts,tsx,scss,css}]
+indent_style = tab
+indent_size = 4
+
+[*.{json,yml,yaml,md}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
