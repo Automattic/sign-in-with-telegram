@@ -1,0 +1,10 @@
+{
+	"name": "@telegram-auth/settings",
+	"version": "0.1.0",
+	"private": true,
+	"license": "GPL-2.0-or-later",
+	"description": "DataForm-based settings UI for the Telegram Auth plugin.",
+	"main": "build/index.cjs",
+	"module": "build-module/index.mjs",
+	"wpScript": true
+}
