@@ -55,5 +55,5 @@ defined( 'ABSPATH' ) || exit;
 	require_once $plugin_dir . 'vendor/autoload.php';
 	require_once $plugin_dir . 'build/build.php';
 
-	\Telegram_Auth\Plugin::init();
+	\Telegram_Auth\Bootstrap::init();
 } )();

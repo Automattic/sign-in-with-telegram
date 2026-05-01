@@ -14,14 +14,14 @@ namespace Telegram_Auth;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Top-level plugin coordinator.
+ * Top-level plugin coordinator. Wires WordPress hooks at boot.
  */
-class Plugin {
+class Bootstrap {
 
 	/**
 	 * Slug used as the @wordpress/build page id and the wp-admin menu slug.
 	 */
-	public const PAGE_SLUG = 'settings';
+	public const PAGE_SLUG = 'telegram-auth';
 
 	/**
 	 * Register WordPress hooks.
@@ -53,7 +53,10 @@ class Plugin {
 			return;
 		}
 
-		$render_callback = 'telegram_auth_settings_render_page';
+		// wp-build generates this name as PREFIX (wpPlugin.name) + page slug
+		// with hyphens converted to underscores. Both are "telegram_auth"
+		// here, hence the duplication.
+		$render_callback = 'telegram_auth_telegram_auth_render_page';
 		if ( ! function_exists( $render_callback ) ) {
 			return;
 		}

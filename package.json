@@ -27,7 +27,7 @@
 		"test": "jest --passWithNoTests"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.0.0",
+		"@eslint/js": "9.39.4",
 		"@types/jest": "^30.0.0",
 		"@types/react": "^18.3.27",
 		"@wordpress/api-fetch": "^7.45.0",
@@ -54,6 +54,6 @@
 		"name": "telegram_auth",
 		"scriptGlobal": "telegramAuth",
 		"packageNamespace": "telegram-auth",
-		"pages": [ "settings" ]
+		"pages": [ "telegram-auth" ]
 	}
 }
