@@ -18,14 +18,16 @@
  * Run as a `postbuild` hook in package.json. Once wp-build's template learns
  * to look up @wordpress/boot from Core's script-module registry instead of
  * a local file path, this shim can go away.
+ *
+ * Tracked upstream: https://github.com/WordPress/gutenberg/issues/77883
  */
 
-const fs = require( 'node:fs' );
-const path = require( 'node:path' );
+const fs = require('node:fs');
+const path = require('node:path');
 
-const repoRoot = path.resolve( __dirname, '..' );
-const targetDir = path.join( repoRoot, 'build', 'modules', 'boot' );
-const targetFile = path.join( targetDir, 'index.min.asset.php' );
+const repoRoot = path.resolve(__dirname, '..');
+const targetDir = path.join(repoRoot, 'build', 'modules', 'boot');
+const targetFile = path.join(targetDir, 'index.min.asset.php');
 
 // Classic-script handles to load before the inline `import("@wordpress/boot")`.
 // Listing a handle that isn't registered as a classic script causes WP to
@@ -55,20 +57,18 @@ const dependencies = [
 	'wp-url',
 ];
 
-const version = String( Date.now() );
+const version = String(Date.now());
 
 const phpContent =
 	`<?php return array(\n` +
 	`	'dependencies' => array(\n` +
-	dependencies.map( ( h ) => `\t\t'${ h }',` ).join( '\n' ) +
+	dependencies.map((h) => `\t\t'${h}',`).join('\n') +
 	`\n\t),\n` +
-	`\t'version' => '${ version }',\n` +
+	`\t'version' => '${version}',\n` +
 	`);\n`;
 
-fs.mkdirSync( targetDir, { recursive: true } );
-fs.writeFileSync( targetFile, phpContent );
+fs.mkdirSync(targetDir, { recursive: true });
+fs.writeFileSync(targetFile, phpContent);
 
-const rel = path.relative( repoRoot, targetFile );
-process.stdout.write(
-	`   ✔ Stubbed ${ rel } (${ dependencies.length } deps)\n`
-);
+const rel = path.relative(repoRoot, targetFile);
+process.stdout.write(`   ✔ Stubbed ${rel} (${dependencies.length} deps)\n`);
