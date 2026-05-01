@@ -19,9 +19,14 @@ defined( 'ABSPATH' ) || exit;
 class Bootstrap {
 
 	/**
-	 * Slug used as the @wordpress/build page id and the wp-admin menu slug.
+	 * Menu slug for the Settings → Telegram Auth submenu.
+	 *
+	 * The wp-build page id is "telegram-auth" (in package.json wpPlugin.pages).
+	 * The integrated wp-admin render callback page-wp-admin.php intercepts the
+	 * URL ?page=<page-id>-wp-admin, so we register the submenu under the
+	 * matching slug.
 	 */
-	public const PAGE_SLUG = 'telegram-auth';
+	public const PAGE_SLUG = 'telegram-auth-wp-admin';
 
 	/**
 	 * Register WordPress hooks.
@@ -53,22 +58,23 @@ class Bootstrap {
 			return;
 		}
 
-		// wp-build generates this name as PREFIX (wpPlugin.name) + page slug
-		// with hyphens converted to underscores. Both are "telegram_auth"
-		// here, hence the duplication.
-		$render_callback = 'telegram_auth_telegram_auth_render_page';
+		// wp-admin-mode render callback from wp-build's pages template.
+		// Renders into a mount div inside the standard wp-admin chrome
+		// (vs. the full-page render which replaces it). Function name is
+		// PREFIX (wpPlugin.name) + page id (with hyphens → underscores)
+		// + "_wp_admin_render_page".
+		$render_callback = 'telegram_auth_telegram_auth_wp_admin_render_page';
 		if ( ! function_exists( $render_callback ) ) {
 			return;
 		}
 
-		add_menu_page(
+		add_submenu_page(
+			'options-general.php',
 			__( 'Telegram Auth', 'telegram-auth' ),
 			__( 'Telegram Auth', 'telegram-auth' ),
 			'manage_options',
 			self::PAGE_SLUG,
-			$render_callback,
-			'dashicons-rest-api',
-			80
+			$render_callback
 		);
 	}
 
