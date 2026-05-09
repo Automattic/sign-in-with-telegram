@@ -19,14 +19,14 @@
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
     },
     "autoload": {
-        "psr-4": {
-            "Telegram_Auth\\": "src/"
-        }
+        "classmap": [
+            "src/"
+        ]
     },
     "autoload-dev": {
-        "psr-4": {
-            "Telegram_Auth\\Tests\\": "tests/php/"
-        }
+        "classmap": [
+            "tests/php/"
+        ]
     },
     "scripts": {
         "phpcs": "phpcs",

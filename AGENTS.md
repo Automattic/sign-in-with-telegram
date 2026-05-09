@@ -8,7 +8,7 @@ A WordPress plugin (`telegram-auth`) that lets visitors sign in to WordPress wit
 
 Stack:
 
-- **PHP** ≥ 8.1, WordPress ≥ 6.8, GPL-2.0-or-later. PSR-4 autoloading via Composer (namespace `Telegram_Auth\` → `src/`).
+- **PHP** ≥ 8.1, WordPress ≥ 6.8, GPL-2.0-or-later. Classmap autoloading via Composer (`autoload.classmap: ["src/"]`), with `automattic/jetpack-autoloader` doing version-aware deduplication at runtime. Files under `src/` follow WPCS naming (`class-foo-bar.php` for class `Foo_Bar`); class names are snake_case. Run `composer dump-autoload` after adding a new class so it shows up in the classmap.
 - **JS / TypeScript** with [`@wordpress/build`](https://www.npmjs.com/package/@wordpress/build) (`wp-build`) as the bundler. esbuild under the hood. Pinned to `0.13.0` (the package is young and ships breaking changes regularly).
 - **Local dev** via [`@wordpress/env`](https://www.npmjs.com/package/@wordpress/env) — Docker-based WP stack with the plugin mounted from the working tree.
 - **Runtime dependency**: WordPress Core ≥ 7.0 _or_ the Gutenberg plugin active. The settings page is rendered by wp-build's experimental `wpPlugin.pages` feature, which depends on the `@wordpress/boot` script module shipped by Gutenberg/Core 7+.
@@ -23,7 +23,7 @@ telegram-auth/
   README.md                  # GitHub-facing readme (local dev quickstart).
   composer.json              # firebase/php-jwt + dev tooling.
   package.json               # @wordpress/build, lint stack, npm scripts.
-  phpcs.xml.dist             # WPCS ruleset (with WordPress.Files.FileName excluded).
+  phpcs.xml.dist             # WPCS ruleset (full WordPress standard, no exclusions).
   eslint.config.js           # Flat config: @eslint/js + @wordpress/eslint-plugin recommended.
   jest.config.cjs            # @wordpress/jest-preset-default + ts-jest.
   phpunit.xml.dist           # Strict; bootstraps Composer autoload.
@@ -34,7 +34,7 @@ telegram-auth/
   .editorconfig
   .gitignore                 # Ignores build/, vendor/, node_modules/, .wp-env/, /temp/, .wp-env.override.json, .vscode/* outliers, etc.
   src/
-    Bootstrap.php            # Telegram_Auth\Bootstrap — registers admin menu + dependency notice.
+    class-bootstrap.php      # Telegram_Auth\Bootstrap — registers Settings → submenu + WP Build polyfill.
   routes/                    # wp-build's file-based router (one dir per route).
     telegram-auth/
       package.json           # { route: { path: '/', page: 'telegram-auth' } }
@@ -86,7 +86,7 @@ npm run build
 
 `telegram-auth.php` is a thin entry: ABSPATH guard, friendly admin notice when `vendor/autoload.php` or `build/build.php` are missing, then `\Telegram_Auth\Bootstrap::init()`.
 
-`Telegram_Auth\Bootstrap` (`src/Bootstrap.php`):
+`Telegram_Auth\Bootstrap` (`src/class-bootstrap.php`):
 
 - `has_runtime()` — returns true when `get_bloginfo('version') >= 7.0` OR the Gutenberg plugin is in `active_plugins`. The wp-build-generated page templates depend on `@wordpress/boot` which only ships with Core 7+/Gutenberg, so the menu is gated on this.
 - `register_menu()` — `add_submenu_page('options-general.php', …, 'telegram-auth-wp-admin', $callback)` on the `admin_menu` hook. Renders the **wp-admin-mode** page (integrated into standard wp-admin layout — vs. the full-page mode that takes over the screen with its own sidebar).
@@ -140,10 +140,10 @@ The OIDC auth flow follows Telegram's [bots/telegram-login](https://core.telegra
 
 ### PHP
 
-- WPCS (`WordPress` ruleset) **with `WordPress.Files.FileName` excluded** in `phpcs.xml.dist`. We use PSR-4 PascalCase filenames so Composer autoload works without a custom loader.
+- WPCS (`WordPress` ruleset) — **no sniff exclusions**. Class files follow `class-foo-bar.php` for class `Foo_Bar`; class names are snake_case (e.g. `OIDC_Exception`, not `OIDCException`, because WPCS would otherwise expect `class-o-i-d-c-exception.php`). Composer uses classmap autoload (not PSR-4), so adding a new class requires `composer dump-autoload`.
 - Global prefix: `telegram_auth_` (or `Telegram_Auth\` for namespaced PHP, `TELEGRAM_AUTH_` for constants).
 - Text domain: `telegram-auth`.
-- VS Code's PHPCS extensions don't always read `phpcs.xml.dist` cleanly; `composer phpcs` is the truth source. `.vscode/settings.json` tries to nudge the obliviousharmony extension at our ruleset, but if it still flags `WordPress.Files.FileName.NotHyphenatedLowercase`, that's an IDE-config issue, not a real lint failure.
+- VS Code's PHPCS extensions don't always read `phpcs.xml.dist` cleanly. `composer phpcs` is the truth source. `.vscode/settings.json` configures the obliviousharmony extension to point at our ruleset, but extension-loading quirks can still cause spurious diagnostics — trust the CLI.
 
 ### TypeScript / JavaScript
 

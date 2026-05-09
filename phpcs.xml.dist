@@ -11,13 +11,7 @@
 	<arg name="extensions" value="php"/>
 	<arg name="colors"/>
 
-	<rule ref="WordPress">
-		<!--
-			We use PSR-4 PascalCase.php filenames so Composer's autoloader
-			works without a custom loader. The rest of WPCS still applies.
-		-->
-		<exclude name="WordPress.Files.FileName"/>
-	</rule>
+	<rule ref="WordPress"/>
 
 	<rule ref="WordPress.WP.I18n">
 		<properties>
