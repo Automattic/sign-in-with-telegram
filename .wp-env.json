@@ -3,7 +3,6 @@
 	"phpVersion": "8.1",
 	"plugins": [
 		".",
-		"https://downloads.wordpress.org/plugin/gutenberg.zip",
 		"https://downloads.wordpress.org/plugin/query-monitor.zip"
 	],
 	"testsEnvironment": false,

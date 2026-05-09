@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin bootstrap. Wires up the admin menu when the runtime
- * (WP Core 7.0+ or the Gutenberg plugin) is present, and shows a
- * dependency notice otherwise.
+ * Plugin bootstrap. Registers the WP Build polyfills early so the
+ * wp-build-generated pages can mount @wordpress/boot, then adds the
+ * Settings → Telegram Auth submenu.
  *
  * @package Telegram_Auth
  */
@@ -10,6 +10,8 @@
 declare(strict_types=1);
 
 namespace Telegram_Auth;
+
+use Automattic\Jetpack\WP_Build_Polyfills\WP_Build_Polyfills;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -32,32 +34,38 @@ class Bootstrap {
 	 * Register WordPress hooks.
 	 */
 	public static function init(): void {
+		// Polyfill the @wordpress/* packages our wp-build-generated pages
+		// expect when running on WP < 7.0 without Gutenberg.
+		WP_Build_Polyfills::register(
+			'telegram-auth',
+			array(
+				// Force-replaced classic scripts: Core's wp-notices is missing
+				// component exports @wordpress/boot needs, and wp-private-apis'
+				// allowlist rejects @wordpress/theme/route on WP < 7.0.
+				'wp-notices',
+				'wp-private-apis',
+				// Conditionally-registered classic scripts. wp-theme is listed
+				// in the boot module's asset.php as a classic-script dependency,
+				// and Core doesn't ship it; without this, WP silently refuses
+				// to print the prerequisites script and the page renders blank.
+				// wp-views is listed for completeness — boot may grow to need
+				// it the same way.
+				'wp-theme',
+				'wp-views',
+				// Script modules.
+				'@wordpress/boot',
+				'@wordpress/route',
+				'@wordpress/a11y',
+			)
+		);
+
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
-		add_action( 'admin_notices', array( self::class, 'maybe_show_dependency_notice' ) );
 	}
 
 	/**
-	 * Whether the @wordpress/boot runtime is available on this install.
-	 *
-	 * @wordpress/boot ships with WordPress Core 7.0+ or with the Gutenberg
-	 * plugin; the wp-build-generated pages won't render without it.
-	 */
-	public static function has_runtime(): bool {
-		if ( version_compare( (string) get_bloginfo( 'version' ), '7.0', '>=' ) ) {
-			return true;
-		}
-		$active = (array) get_option( 'active_plugins', array() );
-		return in_array( 'gutenberg/gutenberg.php', $active, true );
-	}
-
-	/**
-	 * Register the Telegram Auth menu page once the runtime is in place.
+	 * Register the Settings → Telegram Auth submenu.
 	 */
 	public static function register_menu(): void {
-		if ( ! self::has_runtime() ) {
-			return;
-		}
-
 		// wp-admin-mode render callback from wp-build's pages template.
 		// Renders into a mount div inside the standard wp-admin chrome
 		// (vs. the full-page render which replaces it). Function name is
@@ -75,25 +83,6 @@ class Bootstrap {
 			'manage_options',
 			self::PAGE_SLUG,
 			$render_callback
-		);
-	}
-
-	/**
-	 * Surface an admin notice when the runtime is missing.
-	 */
-	public static function maybe_show_dependency_notice(): void {
-		if ( self::has_runtime() ) {
-			return;
-		}
-		if ( ! current_user_can( 'activate_plugins' ) ) {
-			return;
-		}
-		printf(
-			'<div class="notice notice-warning"><p>%s</p></div>',
-			esc_html__(
-				'Telegram Auth requires WordPress 7.0+ or the Gutenberg plugin. Activate Gutenberg to use the plugin.',
-				'telegram-auth'
-			)
 		);
 	}
 }

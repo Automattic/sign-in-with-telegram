@@ -28,7 +28,7 @@ defined( 'ABSPATH' ) || exit;
 	$plugin_dir = plugin_dir_path( __FILE__ );
 
 	$missing = array();
-	if ( ! file_exists( $plugin_dir . 'vendor/autoload.php' ) ) {
+	if ( ! file_exists( $plugin_dir . 'vendor/autoload_packages.php' ) ) {
 		$missing[] = 'composer install';
 	}
 	if ( ! file_exists( $plugin_dir . 'build/build.php' ) ) {
@@ -52,7 +52,7 @@ defined( 'ABSPATH' ) || exit;
 		return;
 	}
 
-	require_once $plugin_dir . 'vendor/autoload.php';
+	require_once $plugin_dir . 'vendor/autoload_packages.php';
 	require_once $plugin_dir . 'build/build.php';
 
 	\Telegram_Auth\Bootstrap::init();
