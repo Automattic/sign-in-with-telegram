@@ -19,6 +19,7 @@ use Telegram_Auth\Http\Endpoints;
 use Telegram_Auth\Http\Failure_Renderer;
 use Telegram_Auth\UI\Avatar_Provider;
 use Telegram_Auth\UI\Login_Button;
+use Telegram_Auth\UI\Login_Button_Block;
 use Telegram_Auth\UI\Profile_Section;
 
 defined( 'ABSPATH' ) || exit;
@@ -68,18 +69,20 @@ class Bootstrap {
 		);
 
 		// Wire the auth pipeline.
-		$settings         = new Settings();
-		$transaction      = new Transaction();
-		$failure_renderer = new Failure_Renderer();
-		$login_handler    = new Login_Handler( $settings, $transaction, $failure_renderer );
-		$endpoints        = new Endpoints( $settings, $transaction, $login_handler, $failure_renderer );
-		$login_button     = new Login_Button( $settings );
-		$avatar_provider  = new Avatar_Provider();
-		$profile_section  = new Profile_Section();
+		$settings           = new Settings();
+		$transaction        = new Transaction();
+		$failure_renderer   = new Failure_Renderer();
+		$login_handler      = new Login_Handler( $settings, $transaction, $failure_renderer );
+		$endpoints          = new Endpoints( $settings, $transaction, $login_handler, $failure_renderer );
+		$login_button       = new Login_Button( $settings );
+		$login_button_block = new Login_Button_Block( $login_button );
+		$avatar_provider    = new Avatar_Provider();
+		$profile_section    = new Profile_Section();
 
 		$endpoints->register();
 		$failure_renderer->register();
 		$login_button->register();
+		$login_button_block->register();
 		$avatar_provider->register();
 		$profile_section->register();
 

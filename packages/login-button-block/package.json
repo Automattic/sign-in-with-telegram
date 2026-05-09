@@ -1,0 +1,16 @@
+{
+	"name": "@telegram-auth/login-button-block",
+	"version": "0.1.0",
+	"private": true,
+	"license": "GPL-2.0-or-later",
+	"description": "Block-editor registration for the Telegram login button.",
+	"module": "./src/index.tsx",
+	"wpScriptModuleExports": "./build-module/index.mjs",
+	"dependencies": {
+		"@wordpress/block-editor": "*",
+		"@wordpress/blocks": "*",
+		"@wordpress/components": "*",
+		"@wordpress/element": "*",
+		"@wordpress/i18n": "*"
+	}
+}

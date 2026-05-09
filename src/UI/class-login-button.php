@@ -116,7 +116,7 @@ class Login_Button {
 	 *
 	 * @return string Escaped HTML.
 	 */
-	private function render( string $label, string $redirect_to ): string {
+	public function render( string $label, string $redirect_to ): string {
 		$url   = $this->get_start_url( '' === $redirect_to ? null : $redirect_to );
 		$icon  = self::paper_plane_svg();
 		$label = trim( $label );
