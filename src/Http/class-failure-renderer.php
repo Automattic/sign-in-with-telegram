@@ -141,6 +141,7 @@ class Failure_Renderer {
 			'cancelled'                          => __( 'Sign-in was canceled.', 'telegram-auth' ),
 			'not_configured'                     => __( 'Telegram sign-in is not yet configured. Please contact the site administrator.', 'telegram-auth' ),
 			'wrong_intent'                       => __( 'That link can only be used while signed in.', 'telegram-auth' ),
+			'already_linked'                     => __( 'That Telegram account is already linked to a different user on this site.', 'telegram-auth' ),
 			'signup_disabled'                    => __( 'New account creation is disabled. Sign in with an existing account first to link Telegram.', 'telegram-auth' ),
 			default                              => __( 'Something went wrong with Telegram sign-in. Please try again.', 'telegram-auth' ),
 		};

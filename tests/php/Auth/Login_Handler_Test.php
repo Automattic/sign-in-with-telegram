@@ -152,13 +152,92 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( 'signup_disabled', $result->get_error_code() );
 	}
 
-	public function test_resolve_user_yields_wrong_intent_for_link_flow(): void {
+	public function test_resolve_user_link_attaches_sub_to_originating_user(): void {
+		$linker     = new \WP_User();
+		$linker->ID = 9; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+
 		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'get_user_by' )->justReturn( $linker );
+
+		$captured_user = null;
+		$captured_sub  = null;
+		Functions\when( 'update_user_meta' )->alias(
+			function ( int $user_id, string $key, $value ) use ( &$captured_user, &$captured_sub ) {
+				if ( 'telegram_auth_sub' === $key ) {
+					$captured_user = $user_id;
+					$captured_sub  = $value;
+				}
+				return true;
+			}
+		);
+
+		$result = $this->make_handler()->resolve_user( self::valid_claims(), self::consumed( 'link', 9 ) );
+
+		$this->assertSame( $linker, $result );
+		$this->assertSame( 9, $captured_user );
+		$this->assertSame( 'tg-user-1', $captured_sub );
+	}
+
+	public function test_resolve_user_link_is_idempotent_when_sub_is_already_mapped_to_same_user(): void {
+		$linker     = new \WP_User();
+		$linker->ID = 9; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+
+		Functions\when( 'get_users' )->justReturn( array( $linker ) );
+		Functions\when( 'get_user_by' )->justReturn( $linker );
+
+		$result = $this->make_handler()->resolve_user( self::valid_claims(), self::consumed( 'link', 9 ) );
+
+		$this->assertSame( $linker, $result );
+	}
+
+	public function test_resolve_user_link_refuses_when_sub_is_already_mapped_to_different_user(): void {
+		$other     = new \WP_User();
+		$other->ID = 42; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+
+		Functions\when( 'get_users' )->justReturn( array( $other ) );
 
 		$result = $this->make_handler()->resolve_user( self::valid_claims(), self::consumed( 'link', 9 ) );
 
 		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'already_linked', $result->get_error_code() );
+	}
+
+	public function test_resolve_user_link_yields_wrong_intent_when_user_id_is_missing(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+
+		$result = $this->make_handler()->resolve_user( self::valid_claims(), self::consumed( 'link', null ) );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
 		$this->assertSame( 'wrong_intent', $result->get_error_code() );
+	}
+
+	public function test_unlink_deletes_both_usermeta_keys(): void {
+		$deleted = array();
+		Functions\when( 'delete_user_meta' )->alias(
+			function ( int $user_id, string $key ) use ( &$deleted ) {
+				$deleted[] = array(
+					'user' => $user_id,
+					'key'  => $key,
+				);
+				return true;
+			}
+		);
+
+		$this->make_handler()->unlink( 7 );
+
+		$this->assertSame(
+			array(
+				array(
+					'user' => 7,
+					'key'  => 'telegram_auth_sub',
+				),
+				array(
+					'user' => 7,
+					'key'  => 'telegram_auth_picture_url',
+				),
+			),
+			$deleted
+		);
 	}
 
 	public function test_resolve_user_rejects_missing_sub(): void {

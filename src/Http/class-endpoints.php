@@ -39,6 +39,7 @@ class Endpoints {
 	public const ACTION_START    = 'telegram_auth_start';
 	public const ACTION_CALLBACK = 'telegram_auth_callback';
 	public const ACTION_LINK     = 'telegram_auth_link';
+	public const ACTION_UNLINK   = 'telegram_auth_unlink';
 
 	/**
 	 * Build the endpoints dispatcher.
@@ -82,6 +83,9 @@ class Endpoints {
 					break;
 				case self::ACTION_LINK:
 					$this->handle_start( 'link', $this->require_logged_in_user_id() );
+					break;
+				case self::ACTION_UNLINK:
+					$this->handle_unlink();
 					break;
 				case self::ACTION_CALLBACK:
 					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Telegram-supplied state acts as CSRF token; verified by Transaction::consume().
@@ -150,6 +154,87 @@ class Endpoints {
 		if ( false === $valid ) {
 			$this->failure_renderer->render_code( Transaction_Exception::STATE_INVALID );
 		}
+	}
+
+	/**
+	 * Run the unlink action: clear the stored sub + avatar URL for the
+	 * targeted user, then bounce back to where the request came from with a
+	 * `telegram_auth_unlinked=1` flag the profile UI can show as a notice.
+	 *
+	 * Targets `?user_id=` when present (admin viewing someone else's
+	 * profile) and falls back to the current user. Authorization is gated
+	 * by `current_user_can( 'edit_user', $target )` so a non-admin can only
+	 * disconnect their own account.
+	 *
+	 * @return never
+	 */
+	private function handle_unlink(): void {
+		$current_id = $this->require_logged_in_user_id();
+		$target_id  = $this->resolve_unlink_target( $current_id );
+
+		$this->verify_unlink_nonce( $target_id );
+
+		if ( ! current_user_can( 'edit_user', $target_id ) ) {
+			$this->failure_renderer->render_code( 'wrong_intent' );
+		}
+
+		$this->login_handler->unlink( $target_id );
+
+		$redirect = add_query_arg(
+			'telegram_auth_unlinked',
+			'1',
+			$this->resolve_post_unlink_redirect()
+		);
+		// Same-site only — wp_safe_redirect rewrites cross-host targets to
+		// the fallback URL, which is exactly what we want for an unlink that
+		// originates from our own profile UI.
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	/**
+	 * Pick the unlink target user. Falls back to the current user when no
+	 * `?user_id=` is supplied.
+	 *
+	 * @param int $current_id Current user id (already known to be > 0).
+	 *
+	 * @return int Target user id.
+	 */
+	private function resolve_unlink_target( int $current_id ): int {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified by verify_unlink_nonce immediately after; absint clamps to a safe int regardless.
+		$raw = isset( $_GET['user_id'] ) ? absint( wp_unslash( $_GET['user_id'] ) ) : 0;
+		return 0 !== $raw ? $raw : $current_id;
+	}
+
+	/**
+	 * Verify the WP nonce protecting the unlink link.
+	 *
+	 * The nonce action is scoped to the target user id so a nonce captured
+	 * for one profile can't be replayed against another.
+	 *
+	 * @param int $target_id User id the unlink is acting on.
+	 *
+	 * @return never on failure (renders an error and exits); void on success.
+	 */
+	private function verify_unlink_nonce( int $target_id ): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified two lines below.
+		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['_wpnonce'] ) ) : '';
+		if ( false === wp_verify_nonce( $nonce, self::ACTION_UNLINK . '_' . $target_id ) ) {
+			$this->failure_renderer->render_code( Transaction_Exception::STATE_INVALID );
+		}
+	}
+
+	/**
+	 * Pick the post-unlink redirect target. Honors `?redirect_to=` when present
+	 * (filtered through esc_url_raw + same-site enforcement by wp_safe_redirect),
+	 * otherwise falls back to the user's profile screen.
+	 *
+	 * @return string Absolute URL.
+	 */
+	private function resolve_post_unlink_redirect(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only; redirect target is sanitized below and constrained to same-host by wp_safe_redirect.
+		$raw = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( (string) $_GET['redirect_to'] ) ) : '';
+		return '' !== $raw ? $raw : admin_url( 'profile.php' );
 	}
 
 	/**

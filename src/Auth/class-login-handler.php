@@ -138,6 +138,23 @@ class Login_Handler {
 			$this->failure_renderer->render_code( $this->code_for_user_error( $user ) );
 		}
 
+		// Link flow: the user is already authenticated; we just attached
+		// (or refreshed) the mapping. Send them back to their profile with
+		// a success flag the UI can render as an admin notice.
+		if ( 'link' === $tx->intent ) {
+			do_action(
+				'telegram_auth_debug',
+				'link_succeeded',
+				array(
+					'user_id' => $user->ID,
+					'sub'     => $claims['sub'] ?? null,
+				)
+			);
+
+			wp_safe_redirect( add_query_arg( 'telegram_auth_linked', '1', admin_url( 'profile.php' ) ) );
+			exit;
+		}
+
 		wp_set_auth_cookie( $user->ID, false );
 
 		do_action(
@@ -156,8 +173,16 @@ class Login_Handler {
 	/**
 	 * Resolve a Telegram `sub` claim to a WP_User, creating one if appropriate.
 	 *
-	 * For A4 only the `intent === 'login'` branch is implemented; `'link'`
-	 * fails closed pending A6.
+	 * Login flow:
+	 *  - Existing mapping → return that user.
+	 *  - Currently logged in + no mapping → attach to current user (no dup).
+	 *  - Anonymous + signups allowed → create.
+	 *
+	 * Link flow (intent === 'link', tx->user_id is the originating user):
+	 *  - Sub already mapped to the SAME user → idempotent success.
+	 *  - Sub mapped to a DIFFERENT user → `already_linked` (refuse to switch
+	 *    sessions silently).
+	 *  - No existing mapping → attach to the originating user.
 	 *
 	 * @param array<string,mixed>  $claims Validated id_token claims.
 	 * @param Consumed_Transaction $tx     Decoded transaction (for intent + originating user_id).
@@ -170,18 +195,24 @@ class Login_Handler {
 			return new WP_Error( 'token_invalid', __( 'Token is missing the sub claim.', 'telegram-auth' ) );
 		}
 
-		// 1. Already linked? Sign in (and refresh profile fields) as that user.
 		$existing = $this->find_user_by_sub( $sub );
+
+		// Link flow runs through a stricter path so we never clobber an
+		// existing mapping or silently switch the session to a different user.
+		if ( 'link' === $tx->intent ) {
+			return $this->resolve_link( $existing, $claims, $sub, $tx );
+		}
+
+		// 1. Already linked? Sign in (and refresh profile fields) as that user.
 		if ( $existing instanceof WP_User ) {
 			$this->update_profile_from_claims( $existing, $claims );
 			return $existing;
 		}
 
 		// 2. The visitor is currently authenticated — attach the new sub to
-		// them rather than creating a duplicate. Covers both the explicit
-		// link flow (intent === 'link') and the "I'm logged in but I clicked
-		// Sign in with Telegram" case, where we'd otherwise spawn a second
-		// account and clobber the existing session.
+		// them rather than creating a duplicate. Covers the "I'm logged in
+		// but I clicked Sign in with Telegram" case, where we'd otherwise
+		// spawn a second account and clobber the existing session.
 		$current_id = get_current_user_id();
 		if ( 0 !== $current_id ) {
 			$current = get_user_by( 'id', $current_id );
@@ -192,18 +223,61 @@ class Login_Handler {
 			}
 		}
 
-		// 3. Anonymous visitor with no existing mapping. The link flow makes
-		// no sense without a session — fail with wrong_intent.
-		if ( 'login' !== $tx->intent ) {
-			return new WP_Error( 'wrong_intent', __( 'Account linking requires being signed in first.', 'telegram-auth' ) );
-		}
-
-		// 4. Sign-up.
+		// 3. Sign-up.
 		if ( ! $this->settings->allow_signups() ) {
 			return new WP_Error( 'signup_disabled', __( 'Sign-up is disabled on this site.', 'telegram-auth' ) );
 		}
 
 		return $this->create_user_from_claims( $claims );
+	}
+
+	/**
+	 * Drive the `intent === 'link'` branch of resolve_user.
+	 *
+	 * @param WP_User|null         $existing The user currently holding this sub mapping, if any.
+	 * @param array<string,mixed>  $claims   Validated id_token claims.
+	 * @param string               $sub      Telegram subject identifier.
+	 * @param Consumed_Transaction $tx       Decoded transaction (carries the originating user id).
+	 *
+	 * @return WP_User|WP_Error
+	 */
+	private function resolve_link( ?WP_User $existing, array $claims, string $sub, Consumed_Transaction $tx ): WP_User|WP_Error {
+		if ( null === $tx->user_id || 0 === $tx->user_id ) {
+			return new WP_Error( 'wrong_intent', __( 'Account linking requires being signed in first.', 'telegram-auth' ) );
+		}
+
+		if ( $existing instanceof WP_User && $existing->ID !== $tx->user_id ) {
+			return new WP_Error( 'already_linked', __( 'This Telegram account is already linked to a different user on this site.', 'telegram-auth' ) );
+		}
+
+		$user = get_user_by( 'id', $tx->user_id );
+		if ( ! $user instanceof WP_User ) {
+			return new WP_Error( 'token_invalid', __( 'Could not load the user that started the link flow.', 'telegram-auth' ) );
+		}
+
+		// Idempotent — writing the same sub a second time is a no-op.
+		update_user_meta( $tx->user_id, self::USERMETA_SUB, $sub );
+		$this->update_profile_from_claims( $user, $claims );
+		return $user;
+	}
+
+	/**
+	 * Remove the Telegram link from a user.
+	 *
+	 * Wipes both the `sub` mapping and the cached avatar URL. Safe to call
+	 * on a user that was never linked.
+	 *
+	 * @param int $user_id Target user.
+	 */
+	public function unlink( int $user_id ): void {
+		delete_user_meta( $user_id, self::USERMETA_SUB );
+		delete_user_meta( $user_id, self::USERMETA_PICTURE_URL );
+
+		do_action(
+			'telegram_auth_debug',
+			'unlinked',
+			array( 'user_id' => $user_id )
+		);
 	}
 
 	/**
@@ -347,7 +421,7 @@ class Login_Handler {
 	 */
 	private function code_for_user_error( WP_Error $error ): string {
 		$code = $error->get_error_code();
-		if ( in_array( $code, array( 'wrong_intent', 'signup_disabled', 'token_invalid' ), true ) ) {
+		if ( in_array( $code, array( 'wrong_intent', 'signup_disabled', 'token_invalid', 'already_linked' ), true ) ) {
 			return (string) $code;
 		}
 		return OIDC_Exception::TOKEN_INVALID;
