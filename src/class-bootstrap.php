@@ -17,6 +17,7 @@ use Telegram_Auth\Auth\Login_Handler;
 use Telegram_Auth\Auth\Transaction;
 use Telegram_Auth\Http\Endpoints;
 use Telegram_Auth\Http\Failure_Renderer;
+use Telegram_Auth\UI\Avatar_Provider;
 use Telegram_Auth\UI\Login_Button;
 
 defined( 'ABSPATH' ) || exit;
@@ -72,10 +73,12 @@ class Bootstrap {
 		$login_handler    = new Login_Handler( $settings, $transaction, $failure_renderer );
 		$endpoints        = new Endpoints( $settings, $transaction, $login_handler, $failure_renderer );
 		$login_button     = new Login_Button( $settings );
+		$avatar_provider  = new Avatar_Provider();
 
 		$endpoints->register();
 		$failure_renderer->register();
 		$login_button->register();
+		$avatar_provider->register();
 
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 	}

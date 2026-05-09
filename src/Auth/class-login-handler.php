@@ -50,6 +50,14 @@ class Login_Handler {
 	public const USERMETA_SUB = 'telegram_auth_sub';
 
 	/**
+	 * Usermeta key storing the Telegram-supplied avatar URL.
+	 *
+	 * Read by Avatar_Provider's pre_get_avatar_data filter; written here when
+	 * the id_token includes a `picture` claim.
+	 */
+	public const USERMETA_PICTURE_URL = 'telegram_auth_picture_url';
+
+	/**
 	 * Build the handler.
 	 *
 	 * @param Settings         $settings         Plugin settings (credentials + redirect URI).
@@ -162,24 +170,35 @@ class Login_Handler {
 			return new WP_Error( 'token_invalid', __( 'Token is missing the sub claim.', 'telegram-auth' ) );
 		}
 
-		$existing = get_users(
-			array(
-				'meta_key'   => self::USERMETA_SUB, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bounded set, indexed via usermeta queries.
-				'meta_value' => $sub,                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- see above.
-				'number'     => 1,
-				'fields'     => 'all',
-			)
-		);
-		if ( ! empty( $existing ) ) {
-			$user = $existing[0];
-			return $user instanceof WP_User ? $user : new WP_Error( 'token_invalid', __( 'Unexpected user lookup result.', 'telegram-auth' ) );
+		// 1. Already linked? Sign in (and refresh profile fields) as that user.
+		$existing = $this->find_user_by_sub( $sub );
+		if ( $existing instanceof WP_User ) {
+			$this->update_profile_from_claims( $existing, $claims );
+			return $existing;
 		}
 
-		// link flow not yet implemented; A6 will resolve $tx->user_id + AccountLinker.
+		// 2. The visitor is currently authenticated — attach the new sub to
+		// them rather than creating a duplicate. Covers both the explicit
+		// link flow (intent === 'link') and the "I'm logged in but I clicked
+		// Sign in with Telegram" case, where we'd otherwise spawn a second
+		// account and clobber the existing session.
+		$current_id = get_current_user_id();
+		if ( 0 !== $current_id ) {
+			$current = get_user_by( 'id', $current_id );
+			if ( $current instanceof WP_User ) {
+				update_user_meta( $current_id, self::USERMETA_SUB, $sub );
+				$this->update_profile_from_claims( $current, $claims );
+				return $current;
+			}
+		}
+
+		// 3. Anonymous visitor with no existing mapping. The link flow makes
+		// no sense without a session — fail with wrong_intent.
 		if ( 'login' !== $tx->intent ) {
-			return new WP_Error( 'wrong_intent', __( 'Account linking is not yet supported.', 'telegram-auth' ) );
+			return new WP_Error( 'wrong_intent', __( 'Account linking requires being signed in first.', 'telegram-auth' ) );
 		}
 
+		// 4. Sign-up.
 		if ( ! $this->settings->allow_signups() ) {
 			return new WP_Error( 'signup_disabled', __( 'Sign-up is disabled on this site.', 'telegram-auth' ) );
 		}
@@ -188,11 +207,71 @@ class Login_Handler {
 	}
 
 	/**
+	 * Look up a WP user by Telegram `sub`.
+	 *
+	 * @param string $sub Subject identifier.
+	 *
+	 * @return WP_User|null
+	 */
+	private function find_user_by_sub( string $sub ): ?WP_User {
+		$users = get_users(
+			array(
+				'meta_key'   => self::USERMETA_SUB, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bounded set, indexed via usermeta queries.
+				'meta_value' => $sub,                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- see above.
+				'number'     => 1,
+				'fields'     => 'all',
+			)
+		);
+		if ( empty( $users ) ) {
+			return null;
+		}
+		$user = $users[0];
+		return $user instanceof WP_User ? $user : null;
+	}
+
+	/**
+	 * Sync first/last/display name and the picture URL from claims.
+	 *
+	 * Only fills in fields the user hasn't already populated themselves —
+	 * we avoid overwriting customizations on every sign-in. Picture URL is
+	 * always refreshed (Telegram rotates the path; the latest one wins).
+	 *
+	 * @param WP_User             $user   Target user.
+	 * @param array<string,mixed> $claims Validated id_token claims.
+	 */
+	private function update_profile_from_claims( WP_User $user, array $claims ): void {
+		$updates = array();
+		$name    = isset( $claims['name'] ) ? trim( (string) $claims['name'] ) : '';
+
+		// Telegram's `name` is a single free-form display string. We don't
+		// guess at first/last splits (different cultures order them
+		// differently); we just use it as the display name and only when
+		// the user hasn't customized theirs already.
+		if ( '' !== $name && ( $user->display_name === $user->user_login || '' === (string) $user->display_name ) ) {
+			$updates['display_name'] = $name;
+		}
+
+		if ( ! empty( $updates ) ) {
+			$updates['ID'] = $user->ID;
+			wp_update_user( $updates );
+		}
+
+		if ( ! empty( $claims['picture'] ) && is_string( $claims['picture'] ) ) {
+			$picture = esc_url_raw( $claims['picture'] );
+			if ( '' !== $picture ) {
+				update_user_meta( $user->ID, self::USERMETA_PICTURE_URL, $picture );
+			}
+		}
+	}
+
+	/**
 	 * Create a new WP user from validated id_token claims.
 	 *
 	 * Username generated defensively (never trusts `preferred_username`),
 	 * email left empty (Telegram never supplies one and `wp_insert_user`
 	 * accepts an empty `user_email`), role per Settings::get_default_role().
+	 * First/last/display name and picture URL come from the `name` and
+	 * `picture` claims when present.
 	 *
 	 * @param array<string,mixed> $claims Validated claim set.
 	 *
@@ -201,21 +280,32 @@ class Login_Handler {
 	private function create_user_from_claims( array $claims ): WP_User|WP_Error {
 		$sub      = (string) $claims['sub'];
 		$username = $this->generate_unique_username( $sub );
-
-		$user_id = wp_insert_user(
-			array(
-				'user_login' => $username,
-				'user_pass'  => wp_generate_password( 32, true, true ),
-				'user_email' => '',
-				'role'       => $this->settings->get_default_role(),
-			)
+		$name     = isset( $claims['name'] ) ? trim( (string) $claims['name'] ) : '';
+		$args     = array(
+			'user_login' => $username,
+			'user_pass'  => wp_generate_password( 32, true, true ),
+			'user_email' => '',
+			'role'       => $this->settings->get_default_role(),
 		);
 
+		if ( '' !== $name ) {
+			$args['display_name'] = $name;
+			$args['nickname']     = $name;
+		}
+
+		$user_id = wp_insert_user( $args );
 		if ( $user_id instanceof WP_Error ) {
 			return $user_id;
 		}
 
 		update_user_meta( (int) $user_id, self::USERMETA_SUB, $sub );
+
+		if ( ! empty( $claims['picture'] ) && is_string( $claims['picture'] ) ) {
+			$picture = esc_url_raw( $claims['picture'] );
+			if ( '' !== $picture ) {
+				update_user_meta( (int) $user_id, self::USERMETA_PICTURE_URL, $picture );
+			}
+		}
 
 		$user = get_user_by( 'id', $user_id );
 		return $user instanceof WP_User

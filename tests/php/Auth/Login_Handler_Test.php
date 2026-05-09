@@ -39,8 +39,13 @@ final class Login_Handler_Test extends TestCase {
 		// fact, so we don't try here.
 		Functions\when( 'sanitize_text_field' )->returnArg();
 		Functions\when( 'wp_unslash' )->returnArg();
+		Functions\when( 'esc_url_raw' )->returnArg();
 		Functions\when( 'do_action' )->justReturn( null );
 		Functions\when( 'wp_set_auth_cookie' )->justReturn( null );
+		Functions\when( 'get_current_user_id' )->justReturn( 0 );
+		Functions\when( 'get_user_meta' )->justReturn( '' );
+		Functions\when( 'update_user_meta' )->justReturn( true );
+		Functions\when( 'wp_update_user' )->justReturn( 1 );
 		Functions\when( 'admin_url' )->justReturn( 'https://example.test/wp-admin/' );
 		Functions\when( 'wp_login_url' )->justReturn( 'https://example.test/wp-login.php' );
 		Functions\when( 'add_query_arg' )->alias(
@@ -164,6 +169,77 @@ final class Login_Handler_Test extends TestCase {
 
 		$this->assertInstanceOf( \WP_Error::class, $result );
 		$this->assertSame( 'token_invalid', $result->get_error_code() );
+	}
+
+	public function test_resolve_user_attaches_new_sub_to_currently_logged_in_user_instead_of_creating_one(): void {
+		$current     = new \WP_User();
+		$current->ID = 7; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'get_current_user_id' )->justReturn( 7 );
+		Functions\when( 'get_user_by' )->justReturn( $current );
+
+		$captured_sub  = null;
+		$captured_user = null;
+		Functions\when( 'update_user_meta' )->alias(
+			function ( int $user_id, string $key, $value ) use ( &$captured_sub, &$captured_user ) {
+				if ( 'telegram_auth_sub' === $key ) {
+					$captured_user = $user_id;
+					$captured_sub  = $value;
+				}
+				return true;
+			}
+		);
+
+		$result = $this->make_handler()->resolve_user( self::valid_claims( 'tg-new' ), self::consumed( 'login' ) );
+
+		$this->assertSame( $current, $result, 'Should return the already-logged-in user, not create a new one.' );
+		$this->assertSame( 7, $captured_user );
+		$this->assertSame( 'tg-new', $captured_sub );
+	}
+
+	public function test_resolve_user_creating_new_user_passes_display_name_and_picture_from_claims(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'username_exists' )->justReturn( false );
+		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => 'users_can_register' === $key ? 1 : $default
+		);
+
+		$inserted = null;
+		Functions\when( 'wp_insert_user' )->alias(
+			function ( array $args ) use ( &$inserted ) {
+				$inserted = $args;
+				return 99;
+			}
+		);
+
+		$created     = new \WP_User();
+		$created->ID = 99; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+		Functions\when( 'get_user_by' )->justReturn( $created );
+
+		$captured_picture = null;
+		Functions\when( 'update_user_meta' )->alias(
+			function ( int $user_id, string $key, $value ) use ( &$captured_picture ) {
+				if ( 'telegram_auth_picture_url' === $key ) {
+					$captured_picture = $value;
+				}
+				return true;
+			}
+		);
+
+		$claims            = self::valid_claims();
+		$claims['name']    = 'Pat Q. Person';
+		$claims['picture'] = 'https://t.me/i/userpic/x.jpg';
+
+		$this->make_handler()->resolve_user( $claims, self::consumed() );
+
+		$this->assertNotNull( $inserted );
+		$this->assertSame( 'Pat Q. Person', $inserted['display_name'] );
+		$this->assertSame( 'Pat Q. Person', $inserted['nickname'] );
+		$this->assertArrayNotHasKey( 'first_name', $inserted, 'We do not split the name into first/last; Telegram supplies a single display string.' );
+		$this->assertArrayNotHasKey( 'last_name', $inserted );
+		$this->assertSame( 'https://t.me/i/userpic/x.jpg', $captured_picture );
 	}
 
 	// --- handle() ---
