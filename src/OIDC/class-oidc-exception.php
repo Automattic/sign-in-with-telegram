@@ -36,6 +36,14 @@ class OIDC_Exception extends \RuntimeException {
 	public const DISCOVERY_INVALID = 'discovery_invalid';
 
 	/**
+	 * Token's iat / exp / nbf are outside the configured skew tolerance.
+	 *
+	 * Distinct from TOKEN_INVALID so callers can surface a "your clock is
+	 * off" hint to the admin instead of the generic invalid-token error.
+	 */
+	public const CLOCK_SKEW = 'clock_skew';
+
+	/**
 	 * Stable failure code, separate from the native int code.
 	 *
 	 * @var string
@@ -57,7 +65,7 @@ class OIDC_Exception extends \RuntimeException {
 	/**
 	 * Stable, programmatic failure code.
 	 *
-	 * @return string One of the class constants (provider_unreachable, token_invalid, discovery_invalid).
+	 * @return string One of the class constants (provider_unreachable, token_invalid, discovery_invalid, clock_skew).
 	 */
 	public function get_failure_code(): string {
 		return $this->failure_code;

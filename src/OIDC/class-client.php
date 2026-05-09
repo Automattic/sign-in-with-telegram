@@ -251,6 +251,23 @@ class Client {
 	}
 
 	/**
+	 * Force a fresh JWKS fetch, bypassing the cache.
+	 *
+	 * Used by Token_Validator when an id_token references a `kid` that isn't
+	 * in the cached JWKS — Telegram may have rotated keys since the last
+	 * cache window. Callers should rate-limit calls externally to avoid
+	 * stampedes against the JWKS endpoint.
+	 *
+	 * @return array<string,mixed> The freshly-fetched JWKS document.
+	 *
+	 * @throws OIDC_Exception When the JWKS can't be fetched or parsed.
+	 */
+	public function refresh_jwks(): array {
+		delete_transient( self::JWKS_TRANSIENT );
+		return $this->get_jwks();
+	}
+
+	/**
 	 * Helper: GET a URL and JSON-decode the body.
 	 *
 	 * @param string $url           Absolute URL to fetch.
