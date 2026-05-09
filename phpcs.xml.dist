@@ -3,9 +3,17 @@
 	<description>Coding standards for the Telegram Auth plugin.</description>
 
 	<file>src</file>
-	<file>tests/php</file>
 	<file>telegram-auth.php</file>
 	<file>uninstall.php</file>
+
+	<!--
+		Tests are deliberately excluded from PHPCS scope. Test files use
+		PHPUnit's filename-must-match-class-stem convention (Foo_Test.php
+		for class Foo_Test), which conflicts with WPCS's class-foo-test.php
+		naming rule. Tests are dev infrastructure only — they don't ship to
+		users — so we don't enforce production code style on them.
+	-->
+	<exclude-pattern>tests/*</exclude-pattern>
 
 	<arg value="sp"/>
 	<arg name="extensions" value="php"/>
