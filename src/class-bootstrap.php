@@ -12,6 +12,12 @@ declare(strict_types=1);
 namespace Telegram_Auth;
 
 use Automattic\Jetpack\WP_Build_Polyfills\WP_Build_Polyfills;
+use Telegram_Auth\Admin\Settings;
+use Telegram_Auth\Auth\Login_Handler;
+use Telegram_Auth\Auth\Transaction;
+use Telegram_Auth\Http\Endpoints;
+use Telegram_Auth\Http\Failure_Renderer;
+use Telegram_Auth\UI\Login_Button;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -58,6 +64,18 @@ class Bootstrap {
 				'@wordpress/a11y',
 			)
 		);
+
+		// Wire the auth pipeline.
+		$settings         = new Settings();
+		$transaction      = new Transaction();
+		$failure_renderer = new Failure_Renderer();
+		$login_handler    = new Login_Handler( $settings, $transaction, $failure_renderer );
+		$endpoints        = new Endpoints( $settings, $transaction, $login_handler, $failure_renderer );
+		$login_button     = new Login_Button( $settings );
+
+		$endpoints->register();
+		$failure_renderer->register();
+		$login_button->register();
 
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 	}
