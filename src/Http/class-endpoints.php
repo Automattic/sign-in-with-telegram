@@ -126,7 +126,13 @@ class Endpoints {
 
 		do_action( 'telegram_auth_debug', 'authorize_redirect', array( 'intent' => $intent ) );
 
-		wp_safe_redirect( $url );
+		// wp_redirect (not wp_safe_redirect) — we deliberately leave-site to
+		// the IdP. wp_safe_redirect rewrites cross-host targets to the
+		// fallback URL unless the host is allow-listed via the
+		// allowed_redirect_hosts filter; we don't need that protection
+		// because $url comes from our own discovery-doc fetch, not user
+		// input.
+		wp_redirect( $url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- See comment above.
 		exit;
 	}
 
