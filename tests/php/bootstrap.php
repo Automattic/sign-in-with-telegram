@@ -45,6 +45,18 @@ if ( ! class_exists( 'WP_Error' ) ) {
 	}
 }
 
+if ( ! class_exists( 'WP_User' ) ) {
+	/**
+	 * Minimal WP_User stand-in for unit tests. Real WP_User has dozens of
+	 * methods we don't touch in unit tests; the public ID property + a
+	 * settable user_login is enough surface for the resolve_user tests.
+	 */
+	class WP_User { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals -- Polyfilling WP core class.
+		public int $ID         = 0; // phpcs:ignore Squiz.NamingConventions.ValidVariableName -- WP core class uses uppercase ID.
+		public string $user_login = '';
+	}
+}
+
 // Translation helpers used inside class files. The real WP versions live in
 // wp-includes/l10n.php; we provide pass-through stand-ins so unit tests can
 // exercise code paths that call __() / esc_html__() without bringing in WP.
