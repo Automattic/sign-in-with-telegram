@@ -5,6 +5,9 @@ on:
   push:
     branches: [ trunk ]
 
+# Default-deny all permissions; jobs grant only what they need.
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -13,23 +16,28 @@ jobs:
   php:
     name: PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         php: [ '8.1', '8.2', '8.3' ]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f  # v2 (2.30.2)
         with:
           php-version: ${{ matrix.php }}
           tools: composer:v2
           coverage: none
 
       - name: Install Composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@a8d0d959dab41457692a5e2041bd9b757a119e3f  # v3
 
       - name: PHPCS
         run: composer phpcs
@@ -40,15 +48,35 @@ jobs:
   js:
     name: JS / TS
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '24'
           cache: npm
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f  # v2 (2.30.2)
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+
+      # The postbuild step (bin/postbuild-shim-boot.cjs) copies an asset from
+      # vendor/automattic/jetpack-wp-build-polyfills, so composer deps must be
+      # available even on the JS-only job.
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@a8d0d959dab41457692a5e2041bd9b757a119e3f  # v3
+        with:
+          composer-options: --no-dev
 
       - name: Install npm dependencies
         run: npm ci

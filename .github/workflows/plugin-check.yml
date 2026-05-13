@@ -5,6 +5,9 @@ on:
   push:
     branches: [ trunk ]
 
+# Default-deny all permissions; the job grants only what it needs.
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -13,12 +16,19 @@ jobs:
   plugin-check:
     name: Plugin Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The action posts a sticky review summary as a PR comment.
+      pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f  # v2 (2.30.2)
         with:
           php-version: '8.1'
           tools: composer:v2
@@ -28,7 +38,7 @@ jobs:
         run: composer install --no-dev --prefer-dist --optimize-autoloader --classmap-authoritative
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '24'
           cache: npm
@@ -40,7 +50,7 @@ jobs:
         run: npm run build
 
       - name: Run Plugin Check
-        uses: WordPress/plugin-check-action@v1
+        uses: WordPress/plugin-check-action@6f5a57e173c065a394b78688f75df543e4011902  # v1
         with:
           build-dir: '.'
-          exclude-directories: 'node_modules,packages,tests,temp,docs,.github'
+          exclude-directories: 'node_modules,packages,tests,temp,docs,.github,bin'
