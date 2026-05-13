@@ -35,26 +35,39 @@ Create a `.wp-env.override.json` at the repo root (gitignored) with this shape:
 }
 ```
 
+If you route outbound HTTP from the container through a host-side proxy (e.g. to capture the OIDC traffic in a debugging proxy), add the proxy settings here too — those are local-machine settings and shouldn't be tracked:
+
+```json
+{
+	"config": {
+		"WP_PROXY_HOST": "socks://host.docker.internal",
+		"WP_PROXY_PORT": "8080"
+	}
+}
+```
+
 Get the values from BotFather → **Bot Settings → Web Login**. wp-env merges the override file on every start; the `config` block is materialized as PHP constants in `wp-config.php`.
 
-In BotFather, register the local redirect URI as:
+**Telegram requires a public HTTPS redirect URI** — `http://localhost:8888/...` is rejected at the BotFather step. To work against the local stack, tunnel it through a public hostname using [Jurassic Tube](https://jurassic.tube) (Automattic), [ngrok](https://ngrok.com), or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), then register the tunneled URL with BotFather:
 
 ```
-http://localhost:8888/wp-login.php?action=telegram_auth_callback
+https://<your-tunnel-host>/wp-login.php?action=telegram_auth_callback
 ```
+
+Match `WP_SITEURL` / `WP_HOME` in `.wp-env.override.json` to the tunnel host so WordPress generates the same URLs it tells Telegram about, otherwise the callback redirect mismatches.
 
 If you start the stack without the override file, the plugin still loads — it just shows a "not configured" admin notice.
 
 ### Companion scripts
 
-| Script | Purpose |
-| --- | --- |
-| `npm run dev` | wp-build watch mode for the JS/SCSS sub-packages. |
-| `npm run build` | One-shot production build of `build/`. |
-| `npm run env:stop` | Stop the wp-env containers (state preserved). |
-| `npm run env:reset` | Destroy and recreate the stack (use after editing `.wp-env.override.json`). |
-| `npm run env:cli -- <cmd>` | Run WP-CLI inside the container. |
-| `npm run env:logs` | Tail container logs. |
+| Script                     | Purpose                                                                     |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `npm run dev`              | wp-build watch mode for the JS/SCSS sub-packages.                           |
+| `npm run build`            | One-shot production build of `build/`.                                      |
+| `npm run env:stop`         | Stop the wp-env containers (state preserved).                               |
+| `npm run env:reset`        | Destroy and recreate the stack (use after editing `.wp-env.override.json`). |
+| `npm run env:cli -- <cmd>` | Run WP-CLI inside the container.                                            |
+| `npm run env:logs`         | Tail container logs.                                                        |
 
 ### Quality gates
 
