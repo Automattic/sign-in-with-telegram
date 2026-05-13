@@ -79,6 +79,7 @@ class Bootstrap {
 		$avatar_provider    = new Avatar_Provider();
 		$profile_section    = new Profile_Section();
 
+		$settings->register();
 		$endpoints->register();
 		$failure_renderer->register();
 		$login_button->register();
