@@ -81,12 +81,13 @@ class Transaction {
 	 * code_verifier + intent + user_id in a single-use transient, and sets
 	 * a cookie carrying the transient id.
 	 *
-	 * @param string   $intent  'login' for the sign-in flow, 'link' for the connect-existing-account flow.
-	 * @param int|null $user_id The current user id when intent === 'link'; null otherwise.
+	 * @param string   $intent      'login' for the sign-in flow, 'link' for the connect-existing-account flow.
+	 * @param int|null $user_id     The current user id when intent === 'link'; null otherwise.
+	 * @param string   $redirect_to Post-login destination (already-sanitized URL). Empty string when the surface didn't supply one.
 	 *
 	 * @return Started_Transaction Public-facing values for the authorize URL.
 	 */
-	public function start( string $intent, ?int $user_id = null ): Started_Transaction {
+	public function start( string $intent, ?int $user_id = null, string $redirect_to = '' ): Started_Transaction {
 		$state          = self::random_token();
 		$nonce          = self::random_token();
 		$code_verifier  = self::random_token();
@@ -100,6 +101,7 @@ class Transaction {
 			'code_verifier' => $code_verifier,
 			'intent'        => $intent,
 			'user_id'       => $user_id,
+			'redirect_to'   => $redirect_to,
 			'created_at'    => time(),
 		);
 
@@ -157,6 +159,7 @@ class Transaction {
 			code_verifier: (string) $payload['code_verifier'],
 			intent:        (string) $payload['intent'],
 			user_id:       isset( $payload['user_id'] ) ? (int) $payload['user_id'] : null,
+			redirect_to:   isset( $payload['redirect_to'] ) ? (string) $payload['redirect_to'] : '',
 		);
 	}
 

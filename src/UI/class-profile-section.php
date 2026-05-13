@@ -142,12 +142,15 @@ class Profile_Section {
 	 * @return string Fully-formed unlink URL.
 	 */
 	private static function unlink_url( int $user_id ): string {
+		// add_query_arg URL-encodes values itself — passing a raw absolute URL
+		// is correct here. A previous version pre-encoded with rawurlencode(),
+		// which produced double-encoded `%25...` redirects.
 		return (string) add_query_arg(
 			array(
 				'action'      => Endpoints::ACTION_UNLINK,
 				'user_id'     => $user_id,
 				'_wpnonce'    => wp_create_nonce( Endpoints::ACTION_UNLINK . '_' . $user_id ),
-				'redirect_to' => rawurlencode( self::profile_url( $user_id ) ),
+				'redirect_to' => self::profile_url( $user_id ),
 			),
 			wp_login_url()
 		);

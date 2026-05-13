@@ -158,6 +158,24 @@ final class Transaction_Test extends TestCase {
 		$this->assertSame( 42, $consumed->user_id );
 	}
 
+	public function test_consume_round_trips_redirect_to_when_supplied(): void {
+		$tx      = new Transaction();
+		$started = $tx->start( 'login', null, 'https://example.test/wp-admin/profile.php' );
+
+		$consumed = $tx->consume( $started->state );
+
+		$this->assertSame( 'https://example.test/wp-admin/profile.php', $consumed->redirect_to );
+	}
+
+	public function test_consume_defaults_redirect_to_to_empty_string(): void {
+		$tx      = new Transaction();
+		$started = $tx->start( 'login' );
+
+		$consumed = $tx->consume( $started->state );
+
+		$this->assertSame( '', $consumed->redirect_to );
+	}
+
 	public function test_consume_deletes_the_transient_so_replays_fail(): void {
 		$tx      = new Transaction();
 		$started = $tx->start( 'login' );

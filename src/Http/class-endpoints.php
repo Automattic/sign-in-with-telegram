@@ -119,8 +119,15 @@ class Endpoints {
 			$this->failure_renderer->render_code( 'not_configured' );
 		}
 
+		// Stash the post-login destination requested by the start surface
+		// (shortcode / login_form / block all set `telegram_auth_redirect_to`).
+		// Cross-host targets are filtered out by wp_safe_redirect at use time,
+		// so we only need a basic URL scrub here.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified by verify_start_nonce above.
+		$redirect_to = isset( $_GET['telegram_auth_redirect_to'] ) ? esc_url_raw( wp_unslash( (string) $_GET['telegram_auth_redirect_to'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
 		$client  = new Client( $config );
-		$started = $this->transaction->start( $intent, $user_id );
+		$started = $this->transaction->start( $intent, $user_id, $redirect_to );
 
 		$url = $client->build_authorize_url(
 			state:          $started->state,

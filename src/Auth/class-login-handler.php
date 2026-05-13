@@ -166,7 +166,12 @@ class Login_Handler {
 			)
 		);
 
-		wp_safe_redirect( admin_url() );
+		// Honour the post-login destination the start surface requested,
+		// falling back to wp-admin/. wp_safe_redirect downgrades cross-host
+		// targets (anything not on `allowed_redirect_hosts`) to the home URL,
+		// so the stored value can't open-redirect a victim off-site.
+		$destination = '' !== $tx->redirect_to ? $tx->redirect_to : admin_url();
+		wp_safe_redirect( $destination );
 		exit;
 	}
 

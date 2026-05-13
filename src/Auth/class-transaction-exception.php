@@ -29,13 +29,15 @@ class Transaction_Exception extends \RuntimeException {
 	public const STATE_INVALID = 'state_invalid';
 
 	/**
-	 * The transient existed but is older than TTL — equivalent in effect to
-	 * STATE_INVALID, but distinct so we can surface a "your link timed out"
-	 * hint instead of a more alarming generic invalid-state message.
+	 * The transient is gone — equivalent in effect to STATE_INVALID, but
+	 * distinct so we can surface a "your link timed out" hint instead of a
+	 * more alarming generic invalid-state message.
 	 *
-	 * (Today the transient TTL takes care of expiry on the WP side; this
-	 * code is reserved in case we ever store created_at and check it
-	 * explicitly so the surfaced message can vary.)
+	 * Today expiry is enforced by the transient's own TTL: when the cookie
+	 * still points at a transient that's been swept by `wp_cron`, the lookup
+	 * returns false and we land here. The `created_at` field on the payload
+	 * is recorded but isn't yet checked explicitly — kept for future
+	 * tightening if we want to detect "transient survived past TTL" cases.
 	 */
 	public const STATE_EXPIRED = 'state_expired';
 
