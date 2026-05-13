@@ -241,7 +241,7 @@ class Token_Validator {
 	 */
 	private function resolve_key( string $kid ) {
 		$jwks = $this->client->get_jwks();
-		$keys = JWK::parseKeySet( $jwks );
+		$keys = $this->parse_keyset( $jwks );
 
 		if ( isset( $keys[ $kid ] ) ) {
 			return $keys[ $kid ];
@@ -274,7 +274,7 @@ class Token_Validator {
 			);
 		}
 
-		$keys = JWK::parseKeySet( $jwks );
+		$keys = $this->parse_keyset( $jwks );
 		if ( isset( $keys[ $kid ] ) ) {
 			return $keys[ $kid ];
 		}
@@ -287,6 +287,35 @@ class Token_Validator {
 			),
 			OIDC_Exception::TOKEN_INVALID
 		);
+	}
+
+	/**
+	 * Parse the JWKS document into a kid-keyed array, converting any
+	 * library-level malformed-key exception into our own OIDC_Exception so
+	 * the dispatcher can render it as a clean failure code instead of
+	 * fatalling the request.
+	 *
+	 * @param array<string,mixed> $jwks JWKS payload as returned by Client::get_jwks() / refresh_jwks().
+	 *
+	 * @return array<string,\Firebase\JWT\Key> Keyed by `kid`.
+	 *
+	 * @throws OIDC_Exception When the JWKS is structurally invalid (empty,
+	 *                       unsupported algs, malformed individual keys, etc.).
+	 */
+	private function parse_keyset( array $jwks ): array {
+		// JWK::parseKeySet throws UnexpectedValueException (most cases),
+		// InvalidArgumentException (empty keys), or DomainException (OpenSSL
+		// failure on a specific key). Treating all three uniformly: the
+		// provider returned something we can't use.
+		try {
+			return JWK::parseKeySet( $jwks );
+		} catch ( \UnexpectedValueException | \InvalidArgumentException | \DomainException $e ) {
+			throw new OIDC_Exception(
+				esc_html__( 'JWKS could not be parsed; provider returned malformed key data.', 'telegram-auth' ),
+				OIDC_Exception::PROVIDER_UNREACHABLE,
+				$e
+			);
+		}
 	}
 
 	/**

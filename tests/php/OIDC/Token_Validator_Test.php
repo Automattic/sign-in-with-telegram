@@ -373,4 +373,26 @@ final class Token_Validator_Test extends TestCase {
 
 		$this->assertSame( 'tg-user-1', $claims['sub'] );
 	}
+
+	// 19. Malformed JWKS payload (key missing required fields) → provider_unreachable
+	// instead of a raw UnexpectedValueException bubbling up to a WP fatal.
+	public function test_malformed_jwks_yields_provider_unreachable_not_fatal(): void {
+		$token = $this->fixture->sign( Jwt_Test_Fixture::default_claims(), self::KID );
+
+		// A JWKS that's structurally a keys-array but whose entry is missing
+		// the required `kty` parameter. JWK::parseKeySet throws
+		// UnexpectedValueException on this; we should translate it.
+		$broken_jwks = array(
+			'keys' => array(
+				array( 'kid' => self::KID ),
+			),
+		);
+
+		try {
+			$this->validator( $broken_jwks )->validate( $token, self::NONCE );
+			$this->fail( 'Expected OIDC_Exception.' );
+		} catch ( OIDC_Exception $e ) {
+			$this->assertSame( OIDC_Exception::PROVIDER_UNREACHABLE, $e->get_failure_code() );
+		}
+	}
 }
