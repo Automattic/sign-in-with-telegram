@@ -275,4 +275,47 @@ final class Client_Test extends TestCase {
 			$this->assertSame( OIDC_Exception::PROVIDER_UNREACHABLE, $e->get_failure_code() );
 		}
 	}
+
+	public function test_refresh_jwks_preserves_cached_keyset_when_refetch_fails(): void {
+		$old_keyset = array( 'keys' => array( array( 'kid' => 'old-kid' ) ) );
+
+		// Cache returns the old keyset. The JWKS HTTP call fails on refresh.
+		Functions\when( 'get_transient' )->alias(
+			static fn( $key ) => Client::JWKS_TRANSIENT === $key ? $old_keyset : false
+		);
+
+		// set_transient must NOT be called with anything other than the discovery
+		// doc — the failed refresh should leave the JWKS cache untouched.
+		$jwks_transient_writes = 0;
+		Functions\when( 'set_transient' )->alias(
+			static function ( string $key ) use ( &$jwks_transient_writes ) {
+				if ( Client::JWKS_TRANSIENT === $key ) {
+					++$jwks_transient_writes;
+				}
+				return true;
+			}
+		);
+
+		Functions\when( 'wp_remote_get' )->alias(
+			static function ( string $url ) {
+				if ( self::is_discovery_url( $url ) ) {
+					return self::http_response( 200, self::VALID_DISCOVERY );
+				}
+				return new WP_Error( 'http_request_failed', 'connection refused' );
+			}
+		);
+
+		// The refresh itself should bubble up the network failure.
+		try {
+			$this->client()->refresh_jwks();
+			$this->fail( 'Expected OIDC_Exception.' );
+		} catch ( OIDC_Exception $e ) {
+			$this->assertSame( OIDC_Exception::PROVIDER_UNREACHABLE, $e->get_failure_code() );
+		}
+
+		// And critically, the cache wasn't touched, so a subsequent get_jwks()
+		// still returns the old keyset.
+		$this->assertSame( 0, $jwks_transient_writes, 'A failed refresh must not overwrite the JWKS cache.' );
+		$this->assertSame( $old_keyset, $this->client()->get_jwks() );
+	}
 }

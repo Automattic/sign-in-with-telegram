@@ -41,17 +41,32 @@ defined( 'ABSPATH' ) || exit;
 class Token_Validator {
 
 	/**
-	 * Acceptable difference between `iat` (and exp/nbf via firebase/php-jwt's
-	 * leeway) and current server time, in seconds.
+	 * Acceptable difference between `iat` / `exp` / `nbf` and current server
+	 * time, in seconds. Passed straight through as firebase/php-jwt's `leeway`
+	 * for the library-side exp/nbf checks, and applied symmetrically in our
+	 * own iat check.
+	 *
+	 * 5 minutes matches the de-facto industry default (Google, Auth0, most
+	 * OIDC clients). 60s was too strict for real-world deployments — local
+	 * Docker-VM clocks routinely drift past it.
 	 */
-	public const SKEW_TOLERANCE_SECONDS = 60;
+	public const SKEW_TOLERANCE_SECONDS = 300;
 
 	/**
-	 * Transient key for the JWKS-refresh rate-limit lockout.
+	 * Window during which a single failed kid lookup will not re-trigger a
+	 * JWKS refresh. Prevents a flood of bad-`kid` tokens from stampeding the
+	 * JWKS endpoint.
+	 */
+	public const JWKS_REFRESH_COOLDOWN_SECONDS = 60;
+
+	/**
+	 * Transient key for the JWKS-refresh rate-limit cooldown.
 	 *
 	 * When a JWKS refresh has just been triggered, this transient is set
-	 * for SKEW_TOLERANCE_SECONDS to prevent stampedes against the JWKS
-	 * endpoint if multiple bad-`kid` tokens arrive in quick succession.
+	 * for JWKS_REFRESH_COOLDOWN_SECONDS. While it's set, an incoming token
+	 * whose `kid` isn't in the freshly-cached JWKS is treated as invalid
+	 * rather than triggering another refresh — we already have the latest
+	 * keys and the kid still isn't there.
 	 */
 	public const REFRESH_LOCKOUT_TRANSIENT = 'telegram_auth_jwks_refresh_lockout';
 
@@ -89,9 +104,13 @@ class Token_Validator {
 
 		$key = $this->resolve_key( $kid );
 
+		// JWT::$leeway is a process-wide static; save and restore so we don't
+		// leak our tolerance into other consumers of the library.
+		$previous_leeway = JWT::$leeway;
+		JWT::$leeway     = self::SKEW_TOLERANCE_SECONDS;
+
 		try {
-			JWT::$leeway = 0;
-			$payload     = JWT::decode( $id_token, $key );
+			$payload = JWT::decode( $id_token, $key );
 		} catch ( BeforeValidException $e ) {
 			throw new OIDC_Exception(
 				esc_html__( 'Token nbf is in the future.', 'telegram-auth' ),
@@ -120,6 +139,8 @@ class Token_Validator {
 				OIDC_Exception::TOKEN_INVALID,
 				$e
 			);
+		} finally {
+			JWT::$leeway = $previous_leeway;
 		}
 
 		$claims = (array) $payload;
@@ -226,19 +247,22 @@ class Token_Validator {
 			return $keys[ $kid ];
 		}
 
-		// Unknown kid — try a (rate-limited) refresh.
+		// Unknown kid. We refresh the JWKS at most once per cooldown window —
+		// if a recent refresh already replaced the cache and this kid still
+		// isn't there, the token is invalid; there's no point retriggering
+		// another fetch.
 		if ( get_transient( self::REFRESH_LOCKOUT_TRANSIENT ) ) {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: %s: kid value from the JWT header. */
-					esc_html__( 'JWKS refresh rate-limited; key for kid %s not available.', 'telegram-auth' ),
+					esc_html__( 'JWKS does not contain a key for kid %s (cooldown active).', 'telegram-auth' ),
 					esc_html( $kid )
 				),
-				OIDC_Exception::PROVIDER_UNREACHABLE
+				OIDC_Exception::TOKEN_INVALID
 			);
 		}
 
-		set_transient( self::REFRESH_LOCKOUT_TRANSIENT, true, self::SKEW_TOLERANCE_SECONDS );
+		set_transient( self::REFRESH_LOCKOUT_TRANSIENT, true, self::JWKS_REFRESH_COOLDOWN_SECONDS );
 
 		try {
 			$jwks = $this->client->refresh_jwks();
@@ -345,9 +369,10 @@ class Token_Validator {
 	/**
 	 * Assert iat is within ±SKEW_TOLERANCE_SECONDS of current server time.
 	 *
-	 * Firebase/php-jwt only checks exp/nbf. The library's leeway is set to 0
-	 * (we manage skew here, explicitly), and we additionally guard against
-	 * absurd-future iat values that some misbehaving providers can produce.
+	 * Firebase/php-jwt only checks exp/nbf (with leeway pinned to
+	 * SKEW_TOLERANCE_SECONDS in `validate()`). iat isn't part of its built-in
+	 * checks, so we apply the same tolerance here ourselves to keep all three
+	 * timestamp claims policed by a single skew constant.
 	 *
 	 * @param array<string,mixed> $claims Decoded claim set.
 	 *

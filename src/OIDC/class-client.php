@@ -236,6 +236,42 @@ class Client {
 			return $cached;
 		}
 
+		$jwks = $this->fetch_and_validate_jwks();
+		set_transient( self::JWKS_TRANSIENT, $jwks, self::CACHE_TTL );
+		return $jwks;
+	}
+
+	/**
+	 * Force a fresh JWKS fetch, bypassing the cache.
+	 *
+	 * Used by Token_Validator when an id_token references a `kid` that isn't
+	 * in the cached JWKS — Telegram may have rotated keys since the last
+	 * cache window. The cached keyset is only replaced after the new one is
+	 * successfully fetched and parsed: a transient network failure during a
+	 * rotation refresh leaves the old keyset intact, so tokens signed by the
+	 * still-valid prior key continue to verify until the next refresh.
+	 *
+	 * Callers should rate-limit calls externally to avoid stampedes against
+	 * the JWKS endpoint.
+	 *
+	 * @return array<string,mixed> The freshly-fetched JWKS document.
+	 *
+	 * @throws OIDC_Exception When the JWKS can't be fetched or parsed.
+	 */
+	public function refresh_jwks(): array {
+		$jwks = $this->fetch_and_validate_jwks();
+		set_transient( self::JWKS_TRANSIENT, $jwks, self::CACHE_TTL );
+		return $jwks;
+	}
+
+	/**
+	 * Fetch and validate the JWKS document. No caching side effects.
+	 *
+	 * @return array<string,mixed> Parsed JWKS document with a guaranteed `keys` array.
+	 *
+	 * @throws OIDC_Exception When the JWKS can't be fetched or parsed.
+	 */
+	private function fetch_and_validate_jwks(): array {
 		$discovery = $this->get_discovery();
 		$jwks      = $this->fetch_json( $discovery['jwks_uri'], OIDC_Exception::PROVIDER_UNREACHABLE );
 
@@ -246,25 +282,7 @@ class Client {
 			);
 		}
 
-		set_transient( self::JWKS_TRANSIENT, $jwks, self::CACHE_TTL );
 		return $jwks;
-	}
-
-	/**
-	 * Force a fresh JWKS fetch, bypassing the cache.
-	 *
-	 * Used by Token_Validator when an id_token references a `kid` that isn't
-	 * in the cached JWKS — Telegram may have rotated keys since the last
-	 * cache window. Callers should rate-limit calls externally to avoid
-	 * stampedes against the JWKS endpoint.
-	 *
-	 * @return array<string,mixed> The freshly-fetched JWKS document.
-	 *
-	 * @throws OIDC_Exception When the JWKS can't be fetched or parsed.
-	 */
-	public function refresh_jwks(): array {
-		delete_transient( self::JWKS_TRANSIENT );
-		return $this->get_jwks();
 	}
 
 	/**

@@ -187,9 +187,10 @@ final class Token_Validator_Test extends TestCase {
 		$this->assertSame( 'tg-user-1', $claims['sub'] );
 	}
 
-	// 6. Unknown kid + refresh rate-limited → provider_unreachable.
-	public function test_unknown_kid_when_refresh_locked_throws_provider_unreachable(): void {
-		// Lockout transient is set → no refresh allowed.
+	// 6. Unknown kid + refresh cooldown active → token_invalid (we already
+	// have the freshly-cached JWKS; the kid genuinely isn't there).
+	public function test_unknown_kid_during_refresh_cooldown_yields_token_invalid(): void {
+		// Cooldown transient is set → no second refresh allowed.
 		Functions\when( 'get_transient' )->alias(
 			static fn( $key ) =>
 				Token_Validator::REFRESH_LOCKOUT_TRANSIENT === $key ? true : false
@@ -201,7 +202,8 @@ final class Token_Validator_Test extends TestCase {
 			$this->validator( $this->fixture->jwks( 'something-else' ) )->validate( $token, self::NONCE );
 			$this->fail( 'Expected OIDC_Exception.' );
 		} catch ( OIDC_Exception $e ) {
-			$this->assertSame( OIDC_Exception::PROVIDER_UNREACHABLE, $e->get_failure_code() );
+			$this->assertSame( OIDC_Exception::TOKEN_INVALID, $e->get_failure_code() );
+			$this->assertStringContainsString( 'cooldown', $e->getMessage() );
 		}
 	}
 
@@ -261,11 +263,11 @@ final class Token_Validator_Test extends TestCase {
 		$this->assertSame( 'tg-user-1', $result['sub'] );
 	}
 
-	// 11. Expired exp → token_invalid.
+	// 11. Expired exp (well past skew tolerance) → token_invalid.
 	public function test_expired_exp_yields_token_invalid(): void {
 		$claims        = Jwt_Test_Fixture::default_claims();
-		$claims['exp'] = time() - 60; // Already expired.
-		$claims['iat'] = time() - 120;
+		$claims['iat'] = time() - 200; // Fresh enough that the iat check passes.
+		$claims['exp'] = time() - 1200; // Expired ~20 minutes ago — past the 5-minute leeway.
 		$token         = $this->fixture->sign( $claims, self::KID );
 
 		try {
@@ -276,12 +278,12 @@ final class Token_Validator_Test extends TestCase {
 		}
 	}
 
-	// 12. iat 5 minutes in the future → clock_skew.
+	// 12. iat far enough in the future to exceed skew tolerance → clock_skew.
 	public function test_future_iat_yields_clock_skew(): void {
 		$now           = time();
 		$claims        = Jwt_Test_Fixture::default_claims();
-		$claims['iat'] = $now + 300; // Five minutes ahead.
-		$claims['exp'] = $now + 600;
+		$claims['iat'] = $now + 3600; // 1 hour ahead — well past the 5-minute tolerance.
+		$claims['exp'] = $now + 7200;
 		$claims['nbf'] = $now - 60; // Don't trip nbf path.
 		$token         = $this->fixture->sign( $claims, self::KID );
 
@@ -293,10 +295,10 @@ final class Token_Validator_Test extends TestCase {
 		}
 	}
 
-	// 13. nbf in the future → clock_skew (firebase/php-jwt's BeforeValidException maps to it).
+	// 13. nbf far enough in the future to exceed leeway → clock_skew (firebase/php-jwt's BeforeValidException).
 	public function test_future_nbf_yields_clock_skew(): void {
 		$claims        = Jwt_Test_Fixture::default_claims();
-		$claims['nbf'] = time() + 600;
+		$claims['nbf'] = time() + 3600; // 1 hour ahead.
 		$token         = $this->fixture->sign( $claims, self::KID );
 
 		try {
@@ -305,6 +307,32 @@ final class Token_Validator_Test extends TestCase {
 		} catch ( OIDC_Exception $e ) {
 			$this->assertSame( OIDC_Exception::CLOCK_SKEW, $e->get_failure_code() );
 		}
+	}
+
+	// 17. iat slightly off (within skew) → accepted. Guards against the prior
+	// strict ±60s window that broke local dev with Docker-VM clock drift.
+	public function test_iat_within_skew_tolerance_is_accepted(): void {
+		$now           = time();
+		$claims        = Jwt_Test_Fixture::default_claims();
+		$claims['iat'] = $now + 120; // 2 minutes ahead — inside the 5-minute tolerance.
+		$claims['exp'] = $now + 900;
+		$token         = $this->fixture->sign( $claims, self::KID );
+
+		$claims = $this->validator( $this->fixture->jwks( self::KID ) )->validate( $token, self::NONCE );
+		$this->assertSame( 'tg-user-1', $claims['sub'] );
+	}
+
+	// 18. exp slightly past (within leeway) → accepted via firebase/php-jwt leeway,
+	// not rejected as token_invalid. Same dev-clock-drift concern as #17.
+	public function test_exp_within_skew_tolerance_is_accepted(): void {
+		$now           = time();
+		$claims        = Jwt_Test_Fixture::default_claims();
+		$claims['iat'] = $now - 200;
+		$claims['exp'] = $now - 120; // Expired 2 minutes ago — inside the 5-minute leeway.
+		$token         = $this->fixture->sign( $claims, self::KID );
+
+		$claims = $this->validator( $this->fixture->jwks( self::KID ) )->validate( $token, self::NONCE );
+		$this->assertSame( 'tg-user-1', $claims['sub'] );
 	}
 
 	// 14. Wrong nonce.
