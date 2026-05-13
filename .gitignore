@@ -4,6 +4,7 @@ packages/*/build/
 packages/*/build-module/
 **/*.map
 .phpunit.cache/
+.dist/
 
 # Dependency installs.
 vendor/

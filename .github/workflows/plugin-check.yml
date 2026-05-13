@@ -49,8 +49,26 @@ jobs:
       - name: Build assets
         run: npm run build
 
+      # Plugin Check mounts whatever build-dir points at as the production
+      # plugin (slug = directory basename). Pointing it at the repo root
+      # would include /.editorconfig, /.gitignore, AGENTS.md, etc. and trip
+      # the "hidden files" / "unexpected markdown" checks. Stage a clean
+      # mirror per .distignore so the plugin-check artifact matches what
+      # wp.org would receive at deploy time.
+      - name: Stage production artifact
+        run: |
+          rm -rf .dist
+          mkdir -p .dist/telegram-auth
+          # rsync's --exclude-from doesn't recognize comments-with-hash, so
+          # strip comment + blank lines from .distignore first.
+          grep -vE '^[[:space:]]*(#|$)' .distignore > "$RUNNER_TEMP/dist-excludes"
+          rsync -a \
+            --exclude-from="$RUNNER_TEMP/dist-excludes" \
+            --exclude='/.dist/' \
+            --exclude='/.git/' \
+            ./ .dist/telegram-auth/
+
       - name: Run Plugin Check
         uses: WordPress/plugin-check-action@6f5a57e173c065a394b78688f75df543e4011902  # v1
         with:
-          build-dir: '.'
-          exclude-directories: 'node_modules,packages,tests,temp,docs,.github,bin'
+          build-dir: .dist/telegram-auth

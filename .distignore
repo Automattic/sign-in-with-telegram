@@ -53,3 +53,9 @@
 # Planning + agent-facing docs that aren't part of the user-facing plugin.
 AGENTS.md
 CLAUDE.md
+
+# Local-machine artifacts that may appear in a developer's working tree
+# but should never ship to wp.org. Unanchored — match at any depth.
+.DS_Store
+.phpunit.cache
+.claude
