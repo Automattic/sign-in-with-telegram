@@ -1,0 +1,72 @@
+name: Plugin Check
+
+on:
+  pull_request:
+
+# Default-deny all permissions; the job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plugin-check:
+    name: Plugin Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The action posts a sticky review summary as a PR comment.
+      pull-requests: write
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f  # v2 (2.30.2)
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Composer dependencies (no dev)
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --classmap-authoritative
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      # Plugin Check mounts whatever build-dir points at as the production
+      # plugin (slug = directory basename). Pointing it at the repo root
+      # would include /.editorconfig, /.gitignore, AGENTS.md, etc. and trip
+      # the "hidden files" / "unexpected markdown" checks. Stage a clean
+      # mirror per .distignore so the plugin-check artifact matches what
+      # wp.org would receive at deploy time.
+      - name: Stage production artifact
+        run: |
+          rm -rf .dist
+          mkdir -p .dist/telegram-auth
+          # rsync's --exclude-from doesn't recognize comments-with-hash, so
+          # strip comment + blank lines from .distignore first.
+          grep -vE '^[[:space:]]*(#|$)' .distignore > "$RUNNER_TEMP/dist-excludes"
+          rsync -a \
+            --exclude-from="$RUNNER_TEMP/dist-excludes" \
+            --exclude='/.dist/' \
+            --exclude='/.git/' \
+            ./ .dist/telegram-auth/
+
+      - name: Run Plugin Check
+        uses: WordPress/plugin-check-action@6f5a57e173c065a394b78688f75df543e4011902  # v1
+        with:
+          build-dir: .dist/telegram-auth

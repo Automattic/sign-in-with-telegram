@@ -1,0 +1,59 @@
+{
+	"name": "telegram-auth",
+	"version": "0.1.0",
+	"description": "Let your visitors sign in to WordPress with their Telegram account.",
+	"private": true,
+	"license": "GPL-2.0-or-later",
+	"author": "Automattic",
+	"homepage": "https://github.com/Automattic/telegram-auth",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Automattic/telegram-auth.git"
+	},
+	"scripts": {
+		"build": "wp-build && node bin/postbuild-shim-boot.cjs",
+		"dev": "wp-build --watch",
+		"env:start": "wp-env start",
+		"env:stop": "wp-env stop",
+		"env:reset": "wp-env destroy --force && wp-env start",
+		"env:cli": "wp-env run cli wp",
+		"env:logs": "wp-env logs",
+		"lint:js": "eslint --no-error-on-unmatched-pattern 'routes/**/*.{ts,tsx,js,jsx}' 'packages/**/*.{ts,tsx,js,jsx}'",
+		"lint:js:fix": "eslint --no-error-on-unmatched-pattern 'routes/**/*.{ts,tsx,js,jsx}' 'packages/**/*.{ts,tsx,js,jsx}' --fix",
+		"typecheck": "tsc --noEmit",
+		"lint:css": "stylelint \"{routes,packages}/**/*.scss\" --allow-empty-input",
+		"lint:css:fix": "stylelint \"{routes,packages}/**/*.scss\" --allow-empty-input --fix",
+		"format": "prettier --write \"{routes,packages}/**/*.{ts,tsx,js,jsx,scss,json}\"",
+		"test": "jest --passWithNoTests"
+	},
+	"devDependencies": {
+		"@eslint/js": "9.39.4",
+		"@types/jest": "^30.0.0",
+		"@types/react": "^18.3.27",
+		"@wordpress/api-fetch": "^7.45.0",
+		"@wordpress/build": "0.13.0",
+		"@wordpress/components": "^33.0.0",
+		"@wordpress/dataviews": "^14.2.0",
+		"@wordpress/element": "^6.45.0",
+		"@wordpress/env": "^11.5.0",
+		"@wordpress/eslint-plugin": "^25.1.0",
+		"@wordpress/i18n": "^6.18.0",
+		"@wordpress/jest-preset-default": "^12.45.0",
+		"@wordpress/prettier-config": "^4.45.0",
+		"@wordpress/stylelint-config": "^23.37.0",
+		"eslint": "^9.39.4",
+		"jest": "^29.7.0",
+		"jest-environment-jsdom": "^29.7.0",
+		"prettier": "^3.8.3",
+		"stylelint": "^16.0.0",
+		"ts-jest": "^29.0.0",
+		"typescript": "^6.0.3"
+	},
+	"prettier": "@wordpress/prettier-config",
+	"wpPlugin": {
+		"name": "telegram_auth",
+		"scriptGlobal": "telegramAuth",
+		"packageNamespace": "telegram-auth",
+		"pages": [ "telegram-auth" ]
+	}
+}

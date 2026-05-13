@@ -1,0 +1,21 @@
+{
+	"phpCodeSniffer.autoExecutable": true,
+	"phpCodeSniffer.standard": "Custom",
+	"phpCodeSniffer.standardCustom": "phpcs.xml.dist",
+
+	// Have PHPCS ignore these files.
+	"phpCodeSniffer.exclude": [
+		"**/.git/**",
+		"**/.svn/**",
+		"**/.hg/**",
+		"**/.cache/**",
+		"**/node_modules/**",
+		"**/vendor/**"
+	],
+	// Custom settings for PHP files.
+	"[php]": {
+		// Ensure that PHP files are formatted with PHPCS.
+		"editor.formatOnSave": true,
+		"editor.defaultFormatter": "obliviousharmony.vscode-php-codesniffer"
+	}
+}

@@ -1,0 +1,66 @@
+# Files and directories excluded from the production plugin artifact
+# distributed to wp.org. Honoured by WordPress/plugin-check-action and
+# 10up/action-wordpress-plugin-deploy.
+
+# Dev infrastructure
+/.github
+/.vscode
+/.wp-env
+/.editorconfig
+/.gitattributes
+/.gitignore
+/.npmrc
+/.nvmrc
+/.distignore
+
+# Source-only directories. The plugin ships the built artifacts only.
+/bin
+/docs
+/packages
+/routes
+/tests
+/temp
+/node_modules
+/vendor/bin
+
+# Package manifests + lockfiles
+/composer.json
+/composer.lock
+/package.json
+/package-lock.json
+/jest.config.cjs
+/tsconfig.json
+/eslint.config.js
+/stylelint.config.cjs
+/.stylelintrc.json
+/patchwork.json
+
+# wp-env / local-dev config
+/.wp-env.json
+/.wp-env.override.json
+/wp-env.override.json
+
+# Lint / sniffer configs (consumed only at dev time)
+/phpcs.xml.dist
+/phpunit.xml.dist
+
+# Source-map and TypeScript build artifacts that wp-build leaves alongside
+# the bundled outputs (the minified .min.js is what ships).
+/packages/*/build-module
+/packages/*/build
+*.map
+
+# Planning + agent-facing docs that aren't part of the user-facing plugin.
+AGENTS.md
+CLAUDE.md
+
+# Local-machine artifacts that may appear in a developer's working tree
+# but should never ship to wp.org. Unanchored — match at any depth.
+.DS_Store
+.phpunit.cache
+.claude
+
+# Dotenv files.
+.env
+.env.*
+.envrc
