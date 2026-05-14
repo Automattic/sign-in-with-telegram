@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin settings reader.
+ * Plugin settings schema and reader.
  *
  * @package Telegram_Auth
  */
@@ -14,29 +14,149 @@ use Telegram_Auth\OIDC\Config;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Reads the plugin's runtime settings.
- *
- * For A4 this is constant-backed only — the OIDC client credentials come
- * from `wp-config.php` constants, and `default_role` is hard-coded. The
- * full settings UI (B1, Track B) will extend this with persisted-option
- * fallback and the rest of the schema (allow_signups, email_mode, etc.).
- *
- * The split lets Track A move forward without waiting on Track B's UI:
- * developers configure the plugin via constants, the auth pipeline reads
- * them here, and once B1 lands, this class grows option-backed accessors
- * that fall back to the constants.
+ * Owns the persisted plugin option schema and runtime accessors.
  */
 class Settings {
 
 	/**
-	 * Constant name for the OIDC client id (Telegram bot's numeric id).
+	 * Single option row backing the plugin settings.
 	 */
-	public const CONSTANT_CLIENT_ID = 'TELEGRAM_AUTH_CLIENT_ID';
+	public const OPTION_KEY = 'telegram_auth_settings';
 
 	/**
-	 * Constant name for the OIDC client secret (BotFather → Web Login).
+	 * Constant name for the OIDC client id (Telegram bot's numeric id).
 	 */
-	public const CONSTANT_CLIENT_SECRET = 'TELEGRAM_AUTH_CLIENT_SECRET';
+	public const CLIENT_ID_CONSTANT = 'TELEGRAM_AUTH_CLIENT_ID';
+
+	/**
+	 * Constant name for the OIDC client secret (BotFather Web Login).
+	 */
+	public const CLIENT_SECRET_CONSTANT = 'TELEGRAM_AUTH_CLIENT_SECRET';
+
+	/**
+	 * Valid modes for handling Telegram's missing email claim.
+	 *
+	 * @var string[]
+	 */
+	private const EMAIL_MODES = array( 'none', 'placeholder', 'require' );
+
+	/**
+	 * Hook settings registration into WordPress.
+	 */
+	public function register(): void {
+		add_action( 'init', array( self::class, 'register_setting' ) );
+	}
+
+	/**
+	 * Register the plugin option with WordPress' Settings API.
+	 */
+	public static function register_setting(): void {
+		if ( false === get_option( self::OPTION_KEY, false ) ) {
+			add_option( self::OPTION_KEY, self::defaults(), '', false );
+		}
+
+		register_setting(
+			'telegram_auth',
+			self::OPTION_KEY,
+			array(
+				'type'              => 'object',
+				'show_in_rest'      => array(
+					'schema' => self::schema(),
+				),
+				'sanitize_callback' => array( self::class, 'sanitize' ),
+				'default'           => self::defaults(),
+			)
+		);
+	}
+
+	/**
+	 * Settings object schema.
+	 *
+	 * Kept alongside the sanitize callback so later REST/UI work can share the
+	 * same field contract without exposing the option through core settings.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function schema(): array {
+		$default_role = self::default_role();
+
+		return array(
+			'type'                 => 'object',
+			'additionalProperties' => false,
+			'properties'           => array(
+				'client_id'           => array(
+					'type'    => 'string',
+					'default' => '',
+					'format'  => 'text-field',
+				),
+				'client_secret'       => array(
+					'type'    => 'string',
+					'default' => '',
+					'format'  => 'text-field',
+				),
+				'default_role'        => array(
+					'type'    => 'string',
+					'enum'    => array_keys( self::roles() ),
+					'default' => $default_role,
+				),
+				'allow_signups'       => array(
+					'type'    => 'boolean',
+					'default' => true,
+				),
+				'email_mode'          => array(
+					'type'    => 'string',
+					'enum'    => self::EMAIL_MODES,
+					'default' => 'none',
+				),
+				'request_phone'       => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
+				'request_dm'          => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
+				'button_label'        => array(
+					'type'    => 'string',
+					'default' => __( 'Sign in with Telegram', 'telegram-auth' ),
+					'format'  => 'text-field',
+				),
+				'post_login_redirect' => array(
+					'type'    => 'string',
+					'default' => '',
+					'format'  => 'uri',
+				),
+			),
+		);
+	}
+
+	/**
+	 * Default settings object.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function defaults(): array {
+		$defaults = array();
+		foreach ( self::schema()['properties'] as $key => $property ) {
+			$defaults[ $key ] = $property['default'];
+		}
+
+		return $defaults;
+	}
+
+	/**
+	 * Sanitize a settings payload into the complete schema.
+	 *
+	 * @param array<string,mixed> $input Raw option payload.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function sanitize( array $input ): array {
+		$defaults = self::defaults();
+		$input    = array_merge( $defaults, $input );
+
+		return rest_sanitize_value_from_schema( $input, self::schema(), self::OPTION_KEY );
+	}
 
 	/**
 	 * Read the configured OIDC client id, or null when none is set.
@@ -44,10 +164,12 @@ class Settings {
 	 * @return string|null
 	 */
 	public function get_client_id(): ?string {
-		if ( ! defined( self::CONSTANT_CLIENT_ID ) ) {
-			return null;
+		$constant = defined( self::CLIENT_ID_CONSTANT ) ? constant( self::CLIENT_ID_CONSTANT ) : '';
+		if ( $constant ) {
+			return $constant;
 		}
-		$value = (string) constant( self::CONSTANT_CLIENT_ID );
+
+		$value = $this->get_setting_value( 'client_id' );
 		return '' === $value ? null : $value;
 	}
 
@@ -57,48 +179,47 @@ class Settings {
 	 * @return string|null
 	 */
 	public function get_client_secret(): ?string {
-		if ( ! defined( self::CONSTANT_CLIENT_SECRET ) ) {
-			return null;
+		$constant = defined( self::CLIENT_SECRET_CONSTANT ) ? constant( self::CLIENT_SECRET_CONSTANT ) : '';
+		if ( $constant ) {
+			return $constant;
 		}
-		$value = (string) constant( self::CONSTANT_CLIENT_SECRET );
+
+		$value = $this->get_setting_value( 'client_secret' );
+
 		return '' === $value ? null : $value;
 	}
 
 	/**
-	 * Build the redirect URI we hand to Telegram's authorize endpoint.
+	 * Identify where the effective client secret comes from.
 	 *
-	 * Always points at `wp-login.php?action=telegram_auth_callback`. The
-	 * caller is expected to register this exact URL in BotFather → Web Login.
-	 *
-	 * @return string
+	 * @return 'constant'|'db'|'unset'
 	 */
-	public function get_redirect_uri(): string {
-		return (string) add_query_arg( 'action', 'telegram_auth_callback', wp_login_url() );
+	public function get_secret_source(): string {
+		$constant = defined( self::CLIENT_SECRET_CONSTANT ) ? constant( self::CLIENT_SECRET_CONSTANT ) : '';
+		if ( $constant ) {
+			return 'constant';
+		}
+
+		$value = $this->get_setting_value( 'client_secret' );
+		return '' === $value ? 'unset' : 'db';
 	}
 
 	/**
 	 * Default role assigned to users created via OIDC sign-up.
 	 *
-	 * Hard-coded to `subscriber` in A4. B1 will replace this with a
-	 * setting-backed accessor once the settings UI is in place.
-	 *
 	 * @return string
 	 */
 	public function get_default_role(): string {
-		return 'subscriber';
+		return $this->get_setting_value( 'default_role' );
 	}
 
 	/**
-	 * Whether new users may be created via OIDC sign-up.
-	 *
-	 * Hard-coded to `true` in A4 (subject to WP's own
-	 * `users_can_register` option), with B1 adding a separate plugin-level
-	 * toggle.
+	 * Whether new users may be created via Telegram sign-up.
 	 *
 	 * @return bool
 	 */
 	public function allow_signups(): bool {
-		return (bool) get_option( 'users_can_register', false );
+		return rest_sanitize_boolean( $this->get_setting_value( 'allow_signups' ) );
 	}
 
 	/**
@@ -116,7 +237,50 @@ class Settings {
 		return new Config(
 			client_id:     $client_id,
 			client_secret: $client_secret,
-			redirect_uri:  $this->get_redirect_uri(),
+			redirect_uri:  add_query_arg( 'action', 'telegram_auth_callback', wp_login_url() ),
 		);
+	}
+
+	/**
+	 * Read one option value, falling back to the schema default.
+	 *
+	 * @param string $key Setting key.
+	 *
+	 * @return mixed
+	 */
+	private function get_setting_value( string $key ): mixed {
+		$options  = get_option( self::OPTION_KEY, array() );
+		$defaults = self::defaults();
+
+		if ( ! is_array( $options ) || ! array_key_exists( $key, $options ) ) {
+			return $defaults[ $key ] ?? null;
+		}
+
+		return $options[ $key ];
+	}
+
+	/**
+	 * Return the best registered default role for new users.
+	 *
+	 * @return string
+	 */
+	private static function default_role(): string {
+		$roles = self::roles();
+		$role  = get_option( 'default_role', 'subscriber' );
+
+		if ( array_key_exists( $role, $roles ) ) {
+			return $role;
+		}
+
+		return array_key_exists( 'subscriber', $roles ) ? 'subscriber' : (string) array_key_first( $roles );
+	}
+
+	/**
+	 * Registered WordPress roles keyed by role slug.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function roles(): array {
+		return wp_roles()->roles;
 	}
 }

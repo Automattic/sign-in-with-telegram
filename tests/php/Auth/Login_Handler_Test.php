@@ -40,6 +40,35 @@ final class Login_Handler_Test extends TestCase {
 		Functions\when( 'sanitize_text_field' )->returnArg();
 		Functions\when( 'wp_unslash' )->returnArg();
 		Functions\when( 'esc_url_raw' )->returnArg();
+		Functions\when( 'sanitize_key' )->alias(
+			static fn( string $value ): string => preg_replace( '/[^a-z0-9_\-]/', '', strtolower( $value ) ) ?? ''
+		);
+		Functions\when( 'rest_sanitize_boolean' )->alias(
+			static function ( $value ): bool {
+				if ( is_bool( $value ) ) {
+					return $value;
+				}
+				if ( is_string( $value ) ) {
+					return ! in_array( strtolower( $value ), array( '', '0', 'false' ), true );
+				}
+				return (bool) $value;
+			}
+		);
+		Functions\when( 'wp_roles' )->justReturn(
+			(object) array(
+				'roles' => array(
+					'subscriber' => array( 'name' => 'Subscriber' ),
+					'editor'     => array( 'name' => 'Editor' ),
+				),
+			)
+		);
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_auth_settings' => $default,
+				'default_role'           => 'subscriber',
+				default                  => $default,
+			}
+		);
 		Functions\when( 'do_action' )->justReturn( null );
 		Functions\when( 'wp_set_auth_cookie' )->justReturn( null );
 		Functions\when( 'get_current_user_id' )->justReturn( 0 );
@@ -116,9 +145,6 @@ final class Login_Handler_Test extends TestCase {
 		Functions\when( 'username_exists' )->justReturn( false );
 		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
 		Functions\when( 'update_user_meta' )->justReturn( true );
-		Functions\when( 'get_option' )->alias(
-			static fn( string $key, $default = false ) => 'users_can_register' === $key ? 1 : $default
-		);
 
 		$inserted = null;
 		Functions\when( 'wp_insert_user' )->alias(
@@ -140,10 +166,14 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( 'subscriber', $inserted['role'] );
 	}
 
-	public function test_resolve_user_yields_signup_disabled_when_users_cannot_register(): void {
+	public function test_resolve_user_yields_signup_disabled_when_plugin_signups_are_disabled(): void {
 		Functions\when( 'get_users' )->justReturn( array() );
 		Functions\when( 'get_option' )->alias(
-			static fn( string $key, $default = false ) => 'users_can_register' === $key ? 0 : $default
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_auth_settings' => array( 'allow_signups' => false ),
+				'default_role'           => 'subscriber',
+				default                  => $default,
+			}
 		);
 
 		$result = $this->make_handler()->resolve_user( self::valid_claims(), self::consumed() );
@@ -281,9 +311,6 @@ final class Login_Handler_Test extends TestCase {
 		Functions\when( 'get_users' )->justReturn( array() );
 		Functions\when( 'username_exists' )->justReturn( false );
 		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
-		Functions\when( 'get_option' )->alias(
-			static fn( string $key, $default = false ) => 'users_can_register' === $key ? 1 : $default
-		);
 
 		$inserted = null;
 		Functions\when( 'wp_insert_user' )->alias(
