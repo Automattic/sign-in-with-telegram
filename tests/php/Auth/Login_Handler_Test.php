@@ -462,28 +462,13 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( array( Scopes::SCOPE_PHONE, Scopes::SCOPE_BOT_ACCESS ), $stored_scopes );
 	}
 
-	public function test_granted_scopes_fall_back_to_requested_scopes_when_token_scope_is_absent(): void {
+	public function test_granted_scopes_record_requested_dm_access_after_successful_callback(): void {
 		$claims                 = self::valid_claims();
 		$claims['phone_number'] = '+15551234567';
 
 		$this->assertSame(
 			array( Scopes::SCOPE_PHONE, Scopes::SCOPE_BOT_ACCESS ),
 			$this->granted_scopes_from_callback(
-				array( 'id_token' => 'token-fixture' ),
-				$claims,
-				self::consumed( 'login', null, array( Scopes::SCOPE_PHONE, Scopes::SCOPE_BOT_ACCESS ) )
-			)
-		);
-	}
-
-	public function test_granted_scopes_honour_token_scope_when_supplied(): void {
-		$claims                 = self::valid_claims();
-		$claims['phone_number'] = '+15551234567';
-
-		$this->assertSame(
-			array( Scopes::SCOPE_PHONE ),
-			$this->granted_scopes_from_callback(
-				array( 'scope' => 'openid profile phone' ),
 				$claims,
 				self::consumed( 'login', null, array( Scopes::SCOPE_PHONE, Scopes::SCOPE_BOT_ACCESS ) )
 			)
@@ -493,15 +478,14 @@ final class Login_Handler_Test extends TestCase {
 	/**
 	 * Invoke Login_Handler's callback-scope derivation helper.
 	 *
-	 * @param array<string,mixed> $tokens Token response.
 	 * @param array<string,mixed> $claims Validated claims.
 	 *
 	 * @return string[]
 	 */
-	private function granted_scopes_from_callback( array $tokens, array $claims, Consumed_Transaction $tx ): array {
+	private function granted_scopes_from_callback( array $claims, Consumed_Transaction $tx ): array {
 		$method = new \ReflectionMethod( Login_Handler::class, 'granted_scopes_from_callback' );
 		$method->setAccessible( true );
-		return $method->invoke( $this->make_handler(), $tokens, $claims, $tx );
+		return $method->invoke( $this->make_handler(), $claims, $tx );
 	}
 
 	// --- handle() ---

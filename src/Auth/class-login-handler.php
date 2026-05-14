@@ -132,7 +132,7 @@ class Login_Handler {
 
 		$validator      = new Token_Validator( $client, (string) $discovery['issuer'], $config->client_id );
 		$claims         = $validator->validate( (string) $tokens['id_token'], $tx->nonce );
-		$granted_scopes = $this->granted_scopes_from_callback( $tokens, $claims, $tx );
+		$granted_scopes = $this->granted_scopes_from_callback( $claims, $tx );
 
 		$user = $this->resolve_user( $claims, $tx, $granted_scopes );
 		if ( $user instanceof WP_Error ) {
@@ -434,47 +434,24 @@ class Login_Handler {
 	}
 
 	/**
-	 * Derive granted optional scopes from the token response, claims and
-	 * original request.
+	 * Derive granted optional scopes from the claims and original request.
 	 *
-	 * @param array<string,mixed>  $tokens Token endpoint response.
 	 * @param array<string,mixed>  $claims Validated id_token claims.
 	 * @param Consumed_Transaction $tx     Consumed transaction.
 	 *
 	 * @return string[]
 	 */
-	private function granted_scopes_from_callback( array $tokens, array $claims, Consumed_Transaction $tx ): array {
-		$requested    = $this->filter_optional_scopes( $tx->requested_optional_scopes );
-		$token_scopes = $this->parse_token_scopes( $tokens );
-		$candidates   = null === $token_scopes
-			? $requested
-			: array_values( array_intersect( $requested, $token_scopes ) );
-
-		$granted = array();
-		if ( in_array( Scopes::SCOPE_PHONE, $candidates, true ) && '' !== $this->sanitize_phone_number_claim( $claims ) ) {
+	private function granted_scopes_from_callback( array $claims, Consumed_Transaction $tx ): array {
+		$requested = $this->filter_optional_scopes( $tx->requested_optional_scopes );
+		$granted   = array();
+		if ( in_array( Scopes::SCOPE_PHONE, $requested, true ) && '' !== $this->sanitize_phone_number_claim( $claims ) ) {
 			$granted[] = Scopes::SCOPE_PHONE;
 		}
-		if ( in_array( Scopes::SCOPE_BOT_ACCESS, $candidates, true ) ) {
+		if ( in_array( Scopes::SCOPE_BOT_ACCESS, $requested, true ) ) {
 			$granted[] = Scopes::SCOPE_BOT_ACCESS;
 		}
 
 		return $granted;
-	}
-
-	/**
-	 * Parse the optional `scope` token response field.
-	 *
-	 * @param array<string,mixed> $tokens Token endpoint response.
-	 *
-	 * @return string[]|null Scope list when Telegram supplied one; null when absent.
-	 */
-	private function parse_token_scopes( array $tokens ): ?array {
-		if ( ! array_key_exists( 'scope', $tokens ) || ! is_string( $tokens['scope'] ) ) {
-			return null;
-		}
-
-		$parts = preg_split( '/\s+/', trim( $tokens['scope'] ) );
-		return is_array( $parts ) ? $this->filter_optional_scopes( $parts ) : array();
 	}
 
 	/**
