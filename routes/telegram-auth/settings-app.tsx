@@ -10,7 +10,7 @@
  */
 
 import apiFetch from '@wordpress/api-fetch';
-import { Button, Notice } from '@wordpress/components';
+import { Button, Notice, SnackbarList } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { DataForm } from '@wordpress/dataviews';
@@ -23,11 +23,11 @@ import type {
 	WpSettingsResponse,
 } from './types';
 
-type SaveState =
-	| { status: 'idle' }
-	| { status: 'saving' }
-	| { status: 'saved' }
-	| { status: 'error'; message: string };
+type Snack = {
+	id: string;
+	status: 'success' | 'error';
+	content: string;
+};
 
 export function SettingsApp(): JSX.Element {
 	const data = window.telegramAuthData;
@@ -50,7 +50,8 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 		data.settings
 	);
 	const [draft, setDraft] = useState<TelegramAuthSettings>(data.settings);
-	const [saveState, setSaveState] = useState<SaveState>({ status: 'idle' });
+	const [saving, setSaving] = useState(false);
+	const [snacks, setSnacks] = useState<Snack[]>([]);
 
 	const fields = buildFields(data.settingsMeta);
 
@@ -66,16 +67,28 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 			...previous,
 			...(patch as Partial<TelegramAuthSettings>),
 		}));
-		if (saveState.status === 'saved' || saveState.status === 'error') {
-			setSaveState({ status: 'idle' });
-		}
+	};
+
+	const pushSnack = (status: 'success' | 'error', content: string) => {
+		setSnacks((prev) => [
+			...prev,
+			{
+				id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+				status,
+				content,
+			},
+		]);
+	};
+
+	const removeSnack = (id: string) => {
+		setSnacks((prev) => prev.filter((s) => s.id !== id));
 	};
 
 	const onSave = async () => {
 		if (!hasChanges) {
 			return;
 		}
-		setSaveState({ status: 'saving' });
+		setSaving(true);
 		try {
 			const response = await apiFetch<WpSettingsResponse>({
 				path: '/wp/v2/settings',
@@ -85,14 +98,21 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 			const saved = response.telegram_auth_settings;
 			setOriginal(saved);
 			setDraft(saved);
-			setSaveState({ status: 'saved' });
+			pushSnack('success', __('Settings saved.', 'telegram-auth'));
 		} catch (err: unknown) {
-			setSaveState({ status: 'error', message: errorMessage(err) });
+			pushSnack(
+				'error',
+				__('Could not save settings:', 'telegram-auth') +
+					' ' +
+					errorMessage(err)
+			);
+		} finally {
+			setSaving(false);
 		}
 	};
 
 	return (
-		<>
+		<div className="telegram-auth-settings-app">
 			<Instructions
 				siteOrigin={data.siteOrigin}
 				redirectUri={data.redirectUri}
@@ -115,37 +135,29 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 						__('Read the instructions above.', 'telegram-auth')}
 				</Notice>
 			)}
-			{saveState.status === 'saved' && (
-				<Notice
-					status="success"
-					onRemove={() => setSaveState({ status: 'idle' })}
-				>
-					{__('Settings saved.', 'telegram-auth')}
-				</Notice>
-			)}
-			{saveState.status === 'error' && (
-				<Notice
-					status="error"
-					onRemove={() => setSaveState({ status: 'idle' })}
-				>
-					{__('Could not save settings:', 'telegram-auth')}{' '}
-					{saveState.message}
-				</Notice>
-			)}
 
 			<div className="telegram-auth-settings-actions">
 				<Button
 					variant="primary"
 					onClick={onSave}
-					disabled={!hasChanges || saveState.status === 'saving'}
-					isBusy={saveState.status === 'saving'}
+					disabled={!hasChanges || saving}
+					isBusy={saving}
 				>
-					{saveState.status === 'saving'
+					{saving
 						? __('Saving…', 'telegram-auth')
 						: __('Save settings', 'telegram-auth')}
 				</Button>
 			</div>
-		</>
+
+			<SnackbarList
+				className="telegram-auth-snackbars"
+				notices={snacks.map((s) => ({
+					id: s.id,
+					content: s.content,
+				}))}
+				onRemove={removeSnack}
+			/>
+		</div>
 	);
 }
 

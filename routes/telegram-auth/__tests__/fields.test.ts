@@ -62,10 +62,34 @@ describe('buildFields', () => {
 });
 
 describe('form layout', () => {
-	it('matches the buildFields ids', () => {
+	it('references only ids declared in buildFields', () => {
 		const fieldIds = new Set(buildFields(ALL_UNSET).map((f) => f.id));
-		for (const id of form.fields ?? []) {
-			expect(fieldIds.has(id as string)).toBe(true);
+		const collect = (
+			items: ReadonlyArray<unknown> | undefined
+		): string[] => {
+			const ids: string[] = [];
+			for (const item of items ?? []) {
+				if (typeof item === 'string') {
+					ids.push(item);
+				} else if (
+					item &&
+					typeof item === 'object' &&
+					'children' in item
+				) {
+					ids.push(
+						...collect(
+							(item as { children?: ReadonlyArray<unknown> })
+								.children
+						)
+					);
+				}
+			}
+			return ids;
+		};
+		const referenced = collect(form.fields);
+		expect(referenced.length).toBe(fieldIds.size);
+		for (const id of referenced) {
+			expect(fieldIds.has(id)).toBe(true);
 		}
 	});
 });

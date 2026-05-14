@@ -179,20 +179,38 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 }
 
 /**
- * Layout config for the DataForm — declares which fields render in
- * what order. Separate from the field config so we can ship the same
- * field set with different layouts in future (compact view, etc.).
+ * Layout config for the DataForm. Groups related fields into card
+ * sections so the settings page reads as logical clusters (credentials,
+ * sign-up policy, optional scopes, presentation) instead of a flat
+ * list. Separate from the field config so we can ship the same field
+ * set with different layouts in future (compact view, etc.).
  */
 export const form: Form = {
+	layout: { type: 'card' },
 	fields: [
-		'client_id',
-		'client_secret',
-		'allow_signups',
-		'default_role',
-		'email_mode',
-		'request_phone',
-		'request_dm',
-		'button_label',
-		'post_login_redirect',
+		{
+			id: 'section-credentials',
+			label: __('Bot credentials', 'telegram-auth'),
+			layout: { type: 'card', withHeader: true, isCollapsible: false },
+			children: ['client_id', 'client_secret'],
+		},
+		{
+			id: 'section-accounts',
+			label: __('New user accounts', 'telegram-auth'),
+			layout: { type: 'card', withHeader: true, isCollapsible: false },
+			children: ['allow_signups', 'default_role', 'email_mode'],
+		},
+		{
+			id: 'section-permissions',
+			label: __('Optional permissions', 'telegram-auth'),
+			layout: { type: 'card', withHeader: true, isCollapsible: false },
+			children: ['request_phone', 'request_dm'],
+		},
+		{
+			id: 'section-presentation',
+			label: __('Sign-in button', 'telegram-auth'),
+			layout: { type: 'card', withHeader: true, isCollapsible: false },
+			children: ['button_label', 'post_login_redirect'],
+		},
 	],
 };
