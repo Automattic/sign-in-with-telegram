@@ -44,7 +44,10 @@
 
 .telegram-auth-instructions-heading {
 	margin: 0;
-	font-size: 1.1rem;
+	font-size: var(--wpds-typography-font-size-lg, 15px);
+	font-family: var(--wpds-typography-font-family-heading);
+    font-weight: var(--wpds-typography-font-weight-medium, 499);
+    line-height: var(--wpds-typography-line-height-sm, 20px);
 }
 
 .telegram-auth-instructions-intro {
