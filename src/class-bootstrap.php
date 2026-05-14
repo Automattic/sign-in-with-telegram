@@ -17,6 +17,7 @@ use Telegram_Auth\Auth\Login_Handler;
 use Telegram_Auth\Auth\Transaction;
 use Telegram_Auth\Http\Endpoints;
 use Telegram_Auth\Http\Failure_Renderer;
+use Telegram_Auth\Http\Rest_Routes;
 use Telegram_Auth\UI\Avatar_Provider;
 use Telegram_Auth\UI\Login_Button;
 use Telegram_Auth\UI\Login_Button_Block;
@@ -74,6 +75,7 @@ class Bootstrap {
 		$failure_renderer   = new Failure_Renderer();
 		$login_handler      = new Login_Handler( $settings, $transaction, $failure_renderer );
 		$endpoints          = new Endpoints( $settings, $transaction, $login_handler, $failure_renderer );
+		$rest_routes        = new Rest_Routes();
 		$login_button       = new Login_Button( $settings );
 		$login_button_block = new Login_Button_Block( $login_button );
 		$avatar_provider    = new Avatar_Provider();
@@ -81,6 +83,7 @@ class Bootstrap {
 
 		$settings->register();
 		$endpoints->register();
+		$rest_routes->register();
 		$failure_renderer->register();
 		$login_button->register();
 		$login_button_block->register();

@@ -205,6 +205,46 @@ final class Settings_Test extends TestCase {
 		$this->assertSame( 'https://evil.test/path', $sanitized['post_login_redirect'] );
 	}
 
+	public function test_sanitize_keeps_existing_secret_when_input_omits_it(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'client_id'     => '111',
+			'client_secret' => 'stored-secret',
+			'button_label'  => 'Old label',
+		);
+
+		$sanitized = Settings::sanitize(
+			array(
+				'client_id'    => '222',
+				'button_label' => 'New label',
+			)
+		);
+
+		// Untouched fields keep their stored values, the omitted secret survives.
+		$this->assertSame( '222', $sanitized['client_id'] );
+		$this->assertSame( 'stored-secret', $sanitized['client_secret'] );
+		$this->assertSame( 'New label', $sanitized['button_label'] );
+	}
+
+	public function test_sanitize_clears_secret_when_input_sends_empty_string_explicitly(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'client_secret' => 'stored-secret',
+		);
+
+		$sanitized = Settings::sanitize(
+			array(
+				'client_secret' => '',
+				'client_id'     => '999',
+			)
+		);
+
+		// Explicit "" means clear. The UI is expected to omit the field
+		// entirely (test above) to keep the existing value.
+		$this->assertSame( '', $sanitized['client_secret'] );
+		$this->assertSame( '999', $sanitized['client_id'] );
+	}
+
 	public function test_sanitize_preserves_empty_redirect_and_accepts_valid_mode(): void {
 		$sanitized = Settings::sanitize(
 			array(

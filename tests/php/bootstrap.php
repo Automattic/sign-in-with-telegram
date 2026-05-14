@@ -57,6 +57,61 @@ if ( ! class_exists( 'WP_User' ) ) {
 	}
 }
 
+if ( ! class_exists( 'WP_REST_Request' ) ) {
+	/**
+	 * Minimal WP_REST_Request stand-in. Real WP_REST_Request supports
+	 * headers, files, attributes, and a half-dozen other affordances —
+	 * tests only need to ferry a params bag and let the handler under
+	 * test pull values out by name.
+	 */
+	class WP_REST_Request { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals -- Polyfilling WP core class.
+		/**
+		 * @param array<string,mixed> $params
+		 */
+		public function __construct( private array $params = array() ) {}
+
+		public function get_param( string $key ): mixed {
+			return $this->params[ $key ] ?? null;
+		}
+
+		public function has_param( string $key ): bool {
+			return array_key_exists( $key, $this->params );
+		}
+
+		/**
+		 * @return array<string,mixed>
+		 */
+		public function get_params(): array {
+			return $this->params;
+		}
+
+		public function set_param( string $key, mixed $value ): void {
+			$this->params[ $key ] = $value;
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_REST_Response' ) ) {
+	/**
+	 * Minimal WP_REST_Response stand-in. Just stores data + status so
+	 * tests can assert on the response shape.
+	 */
+	class WP_REST_Response { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals -- Polyfilling WP core class.
+		public function __construct(
+			private mixed $data = null,
+			private int $status = 200,
+		) {}
+
+		public function get_data(): mixed {
+			return $this->data;
+		}
+
+		public function get_status(): int {
+			return $this->status;
+		}
+	}
+}
+
 // Translation helpers used inside class files. The real WP versions live in
 // wp-includes/l10n.php; we provide pass-through stand-ins so unit tests can
 // exercise code paths that call __() / esc_html__() without bringing in WP.
