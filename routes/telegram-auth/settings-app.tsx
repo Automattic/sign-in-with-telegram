@@ -16,6 +16,7 @@ import { __ } from '@wordpress/i18n';
 import { DataForm } from '@wordpress/dataviews';
 
 import { buildFields, form, BOT_TOKEN_SHAPE } from './fields';
+import { Instructions } from './instructions';
 import type {
 	TelegramAuthData,
 	TelegramAuthSettings,
@@ -92,6 +93,11 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 
 	return (
 		<>
+			<Instructions
+				siteOrigin={data.siteOrigin}
+				redirectUri={data.redirectUri}
+			/>
+
 			<DataForm<TelegramAuthSettings>
 				data={draft}
 				fields={fields}

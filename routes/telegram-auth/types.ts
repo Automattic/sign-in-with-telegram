@@ -38,6 +38,8 @@ export interface WpSettingsResponse {
 export interface TelegramAuthData {
 	settings: TelegramAuthSettings;
 	settingsMeta: SettingsMeta;
+	siteOrigin: string;
+	redirectUri: string;
 }
 
 declare global {

@@ -92,12 +92,18 @@ class Bootstrap {
 		add_action(
 			'admin_print_scripts-settings_page_' . self::PAGE_SLUG,
 			static function () use ( $settings ): void {
+				$home_url     = home_url();
+				$site_origin  = (string) wp_parse_url( $home_url, PHP_URL_SCHEME ) . '://' . (string) wp_parse_url( $home_url, PHP_URL_HOST );
+				$redirect_uri = add_query_arg( 'action', 'telegram_auth_callback', wp_login_url() );
+
 				$data = array(
 					'settings'     => $settings->get_all(),
 					'settingsMeta' => array(
 						'client_id_source'     => $settings->get_client_id_source(),
 						'client_secret_source' => $settings->get_client_secret_source(),
 					),
+					'siteOrigin'   => $site_origin,
+					'redirectUri'  => $redirect_uri,
 				);
 				printf(
 					'<script>window.telegramAuthData = %s;</script>',
