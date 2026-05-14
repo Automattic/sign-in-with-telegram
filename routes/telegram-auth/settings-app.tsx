@@ -12,12 +12,13 @@
 import apiFetch from '@wordpress/api-fetch';
 import { Button, Notice, SnackbarList } from '@wordpress/components';
 import { useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { DataForm } from '@wordpress/dataviews';
 
 import { buildFields, form, BOT_TOKEN_SHAPE } from './fields';
 import { Instructions } from './instructions';
 import type {
+	SettingsMeta,
 	TelegramAuthData,
 	TelegramAuthSettings,
 	WpSettingsResponse,
@@ -25,7 +26,6 @@ import type {
 
 type Snack = {
 	id: string;
-	status: 'success' | 'error';
 	content: string;
 };
 
@@ -69,12 +69,11 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 		}));
 	};
 
-	const pushSnack = (status: 'success' | 'error', content: string) => {
+	const pushSnack = (content: string) => {
 		setSnacks((prev) => [
 			...prev,
 			{
 				id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-				status,
 				content,
 			},
 		]);
@@ -95,16 +94,21 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 				method: 'POST',
 				data: { telegram_auth_settings: dirty },
 			});
-			const saved = response.telegram_auth_settings;
+			const saved = preserveConstants(
+				response.telegram_auth_settings,
+				original,
+				data.settingsMeta
+			);
 			setOriginal(saved);
 			setDraft(saved);
-			pushSnack('success', __('Settings saved.', 'telegram-auth'));
+			pushSnack(__('Settings saved.', 'telegram-auth'));
 		} catch (err: unknown) {
 			pushSnack(
-				'error',
-				__('Could not save settings:', 'telegram-auth') +
-					' ' +
+				sprintf(
+					/* translators: %s is the underlying API error message. */
+					__('Could not save settings: %s', 'telegram-auth'),
 					errorMessage(err)
+				)
 			);
 		} finally {
 			setSaving(false);
@@ -127,12 +131,14 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 
 			{botTokenWarning && (
 				<Notice status="warning" isDismissible={false}>
-					{__(
-						'That looks like a Telegram Bot token, not the Client Secret.',
-						'telegram-auth'
-					) +
-						' ' +
-						__('Read the instructions above.', 'telegram-auth')}
+					{sprintf(
+						'%1$s %2$s',
+						__(
+							'That looks like a Telegram Bot token, not the Client Secret.',
+							'telegram-auth'
+						),
+						__('Read the instructions above.', 'telegram-auth')
+					)}
 				</Notice>
 			)}
 
@@ -162,6 +168,35 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 }
 
 /**
+ * Re-apply constant-pinned credential values to a REST response.
+ *
+ * The settings REST endpoint returns the *stored* option, which has no
+ * knowledge of wp-config constants. The initial draft was seeded from
+ * `Settings::get_all()` (constant-resolved), so a save would otherwise
+ * flip the disabled credential field from the constant value to an
+ * empty DB value until the page reloads. Carry the original value
+ * forward whenever the source is `constant`.
+ *
+ * @param saved    Settings as returned by the REST API.
+ * @param previous Settings as we last had them (constant-resolved).
+ * @param meta     Source flags captured at mount.
+ */
+export function preserveConstants(
+	saved: TelegramAuthSettings,
+	previous: TelegramAuthSettings,
+	meta: SettingsMeta
+): TelegramAuthSettings {
+	const out = { ...saved };
+	if (meta.client_id_source === 'constant') {
+		out.client_id = previous.client_id;
+	}
+	if (meta.client_secret_source === 'constant') {
+		out.client_secret = previous.client_secret;
+	}
+	return out;
+}
+
+/**
  * Compute the dirty subset of `next` relative to `prev` so we only
  * send the fields the user actually changed. Settings::sanitize
  * merges the partial payload over the stored option, so untouched
@@ -170,7 +205,7 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
  * @param prev Last loaded / saved state.
  * @param next Current draft state.
  */
-function diff(
+export function diff(
 	prev: TelegramAuthSettings,
 	next: TelegramAuthSettings
 ): Partial<TelegramAuthSettings> {
@@ -188,7 +223,7 @@ function diff(
  *
  * @param err Thrown value (anything Promise.reject can carry).
  */
-function errorMessage(err: unknown): string {
+export function errorMessage(err: unknown): string {
 	if (
 		err &&
 		typeof err === 'object' &&

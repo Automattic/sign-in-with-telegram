@@ -75,9 +75,10 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 								code: <code>TELEGRAM_AUTH_CLIENT_ID</code>,
 							}
 						)
-					: __('Get it from @BotFather.', 'telegram-auth') +
-						' ' +
-						__('Read the instructions above.', 'telegram-auth'),
+					: __(
+							'Get it from @BotFather. Read the instructions above.',
+							'telegram-auth'
+						),
 			isDisabled: meta.client_id_source === 'constant',
 		},
 		{
@@ -99,9 +100,10 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 								code: <code>TELEGRAM_AUTH_CLIENT_SECRET</code>,
 							}
 						)
-					: __('Get it from @BotFather.', 'telegram-auth') +
-						' ' +
-						__('Read the instructions above.', 'telegram-auth'),
+					: __(
+							'Get it from @BotFather. Read the instructions above.',
+							'telegram-auth'
+						),
 			isDisabled: meta.client_secret_source === 'constant',
 		},
 		{
