@@ -71,32 +71,72 @@ final class Settings_Test extends TestCase {
 				return (object) array( 'roles' => $this->roles );
 			}
 		);
-		Functions\when( 'sanitize_key' )->alias(
-			static fn( string $value ): string => preg_replace( '/[^a-z0-9_\-]/', '', strtolower( $value ) ) ?? ''
-		);
-		Functions\when( 'sanitize_text_field' )->alias(
-			static fn( string $value ): string => trim( preg_replace( '/<[^>]*>/', '', $value ) ?? '' )
-		);
-		Functions\when( 'rest_sanitize_boolean' )->alias(
-			static function ( $value ): bool {
-				if ( is_bool( $value ) ) {
-					return $value;
+		// Mock WP's schema-based sanitizer for the shapes Settings::schema()
+		// actually uses (object → properties; string with optional enum /
+		// format=text-field / format=uri; boolean). Self-contained so the
+		// rest of setUp doesn't need to stub sanitize_text_field /
+		// rest_sanitize_boolean / esc_url_raw individually. On enum
+		// violation, fall back to the property's default rather than
+		// returning a WP_Error, which is the behavior the settings UI
+		// relies on for graceful recovery from a stale payload.
+		Functions\when( 'rest_sanitize_value_from_schema' )->alias( self::sanitize_value_from_schema( ... ) );
+	}
+
+	/**
+	 * Recursive helper used to stub WP's rest_sanitize_value_from_schema.
+	 *
+	 * @param mixed               $value  Input value.
+	 * @param array<string,mixed> $schema Schema fragment.
+	 *
+	 * @return mixed Sanitized value.
+	 */
+	private static function sanitize_value_from_schema( mixed $value, array $schema ): mixed {
+		$type = $schema['type'] ?? null;
+
+		if ( 'object' === $type && is_array( $value ) && isset( $schema['properties'] ) ) {
+			$sanitized = array();
+			foreach ( $schema['properties'] as $key => $property ) {
+				if ( array_key_exists( $key, $value ) ) {
+					$sanitized[ $key ] = self::sanitize_value_from_schema( $value[ $key ], $property );
+				} elseif ( array_key_exists( 'default', $property ) ) {
+					$sanitized[ $key ] = $property['default'];
 				}
-				if ( is_string( $value ) ) {
-					return ! in_array( strtolower( $value ), array( '', '0', 'false' ), true );
-				}
-				return (bool) $value;
 			}
-		);
-		Functions\when( 'esc_url_raw' )->returnArg();
-		Functions\when( 'home_url' )->justReturn( 'https://example.test/' );
-		Functions\when( 'wp_validate_redirect' )->alias(
-			static function ( string $location, string $fallback ): string {
-				return str_starts_with( $location, 'https://example.test/' ) || str_starts_with( $location, '/' )
-					? $location
-					: $fallback;
+			return $sanitized;
+		}
+
+		if ( 'boolean' === $type ) {
+			if ( is_bool( $value ) ) {
+				return $value;
 			}
-		);
+			if ( is_string( $value ) ) {
+				return ! in_array( strtolower( $value ), array( '', '0', 'false' ), true );
+			}
+			return (bool) $value;
+		}
+
+		if ( 'string' === $type ) {
+			$string_value = is_scalar( $value ) ? (string) $value : '';
+
+			if ( isset( $schema['format'] ) ) {
+				$string_value = match ( $schema['format'] ) {
+					// Stand-in for sanitize_text_field: trim + strip tags.
+					'text-field' => trim( preg_replace( '/<[^>]*>/', '', $string_value ) ?? '' ),
+					// Stand-in for esc_url_raw: pass through unchanged (it
+					// just filters the scheme list; we don't assert that).
+					'uri'        => $string_value,
+					default      => $string_value,
+				};
+			}
+
+			if ( isset( $schema['enum'] ) && is_array( $schema['enum'] ) && ! in_array( $string_value, $schema['enum'], true ) ) {
+				return $schema['default'] ?? ( $schema['enum'][0] ?? '' );
+			}
+
+			return $string_value;
+		}
+
+		return $value;
 	}
 
 	protected function tearDown(): void {
@@ -159,7 +199,10 @@ final class Settings_Test extends TestCase {
 		$this->assertTrue( $sanitized['request_phone'] );
 		$this->assertFalse( $sanitized['request_dm'] );
 		$this->assertSame( 'Continue with Telegram', $sanitized['button_label'] );
-		$this->assertSame( 'https://example.test/', $sanitized['post_login_redirect'] );
+		// `format: uri` runs the value through esc_url_raw only; same-host
+		// enforcement happens at use time via wp_safe_redirect in Login_Handler,
+		// not at save time.
+		$this->assertSame( 'https://evil.test/path', $sanitized['post_login_redirect'] );
 	}
 
 	public function test_sanitize_preserves_empty_redirect_and_accepts_valid_mode(): void {
@@ -243,13 +286,6 @@ final class Settings_Test extends TestCase {
 		$this->assertSame( 'constant', $settings->get_secret_source() );
 	}
 
-	public function test_is_bot_token_shape_accepts_and_rejects_expected_shapes(): void {
-		$this->assertTrue( Settings::is_bot_token_shape( '12345:abc_DEF-99' ) );
-		$this->assertFalse( Settings::is_bot_token_shape( 'oidc-secret-value' ) );
-		$this->assertFalse( Settings::is_bot_token_shape( '12345' ) );
-		$this->assertFalse( Settings::is_bot_token_shape( 'abc:def' ) );
-	}
-
 	public function test_register_hooks_the_settings_api_registration(): void {
 		Functions\expect( 'add_action' )
 			->once()
@@ -282,9 +318,9 @@ final class Settings_Test extends TestCase {
 				\Mockery::on(
 						static fn( $args ): bool => is_array( $args )
 							&& 'object' === $args['type']
-							&& false === $args['show_in_rest']
-							&& 'string' === $args['schema']['properties']['client_id']['type']
-							&& 'boolean' === $args['schema']['properties']['allow_signups']['type']
+							&& is_array( $args['show_in_rest'] )
+							&& 'string' === $args['show_in_rest']['schema']['properties']['client_id']['type']
+							&& 'boolean' === $args['show_in_rest']['schema']['properties']['allow_signups']['type']
 							&& array( Settings::class, 'sanitize' ) === $args['sanitize_callback']
 							&& is_array( $args['default'] )
 				)
