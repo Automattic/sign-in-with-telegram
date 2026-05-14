@@ -152,10 +152,14 @@ class Settings {
 	 * @return array<string,mixed>
 	 */
 	public static function sanitize( array $input ): array {
-		$defaults = self::defaults();
-		$input    = array_merge( $defaults, $input );
+		$stored = get_option( self::OPTION_KEY, array() );
+		$base   = is_array( $stored ) && ! empty( $stored )
+			? array_merge( self::defaults(), $stored )
+			: self::defaults();
 
-		return rest_sanitize_value_from_schema( $input, self::schema(), self::OPTION_KEY );
+		$merged = array_merge( $base, $input );
+
+		return rest_sanitize_value_from_schema( $merged, self::schema(), self::OPTION_KEY );
 	}
 
 	/**
