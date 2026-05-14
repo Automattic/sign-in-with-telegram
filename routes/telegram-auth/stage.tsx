@@ -1,13 +1,10 @@
 import { __ } from '@wordpress/i18n';
 
+import { SettingsApp } from './settings-app';
+
 export const stage = () => (
-	<div className="wrap">
+	<div className="wrap telegram-auth-settings">
 		<h1>{__('Telegram Auth', 'telegram-auth')}</h1>
-		<p>
-			{__(
-				'Settings UI placeholder — wired up to verify the wp-build pipeline end-to-end.',
-				'telegram-auth'
-			)}
-		</p>
+		<SettingsApp />
 	</div>
 );

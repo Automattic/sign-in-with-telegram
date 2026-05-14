@@ -38,7 +38,7 @@ class Settings {
 	 *
 	 * @var string[]
 	 */
-	private const EMAIL_MODES = array( 'none', 'placeholder', 'require' );
+	private const EMAIL_MODES = array( 'none', 'placeholder' );
 
 	/**
 	 * Hook settings registration into WordPress.
@@ -163,6 +163,34 @@ class Settings {
 	}
 
 	/**
+	 * Return the complete effective settings array.
+	 *
+	 * Merges defaults → stored option → wp-config constant overrides for
+	 * `client_id` / `client_secret`, so callers get a single source of
+	 * truth that already reflects the constant pinning. Used by the
+	 * settings UI bootstrap to seed the form without a REST round-trip.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function get_all(): array {
+		$stored   = get_option( self::OPTION_KEY, array() );
+		$settings = is_array( $stored ) && ! empty( $stored )
+			? array_merge( self::defaults(), $stored )
+			: self::defaults();
+
+		$client_id = $this->get_client_id();
+		if ( null !== $client_id ) {
+			$settings['client_id'] = $client_id;
+		}
+		$client_secret = $this->get_client_secret();
+		if ( null !== $client_secret ) {
+			$settings['client_secret'] = $client_secret;
+		}
+
+		return $settings;
+	}
+
+	/**
 	 * Read the configured OIDC client id, or null when none is set.
 	 *
 	 * @return string|null
@@ -194,17 +222,38 @@ class Settings {
 	}
 
 	/**
+	 * Identify where the effective client id comes from.
+	 *
+	 * @return 'constant'|'db'|'unset'
+	 */
+	public function get_client_id_source(): string {
+		return $this->source_for( self::CLIENT_ID_CONSTANT, 'client_id' );
+	}
+
+	/**
 	 * Identify where the effective client secret comes from.
 	 *
 	 * @return 'constant'|'db'|'unset'
 	 */
-	public function get_secret_source(): string {
-		$constant = defined( self::CLIENT_SECRET_CONSTANT ) ? constant( self::CLIENT_SECRET_CONSTANT ) : '';
+	public function get_client_secret_source(): string {
+		return $this->source_for( self::CLIENT_SECRET_CONSTANT, 'client_secret' );
+	}
+
+	/**
+	 * Shared resolver for credential-source flags.
+	 *
+	 * @param string $constant_name Name of the wp-config constant that overrides the option.
+	 * @param string $option_key    Property name on the settings option.
+	 *
+	 * @return 'constant'|'db'|'unset'
+	 */
+	private function source_for( string $constant_name, string $option_key ): string {
+		$constant = defined( $constant_name ) ? constant( $constant_name ) : '';
 		if ( $constant ) {
 			return 'constant';
 		}
 
-		$value = $this->get_setting_value( 'client_secret' );
+		$value = $this->get_setting_value( $option_key );
 		return '' === $value ? 'unset' : 'db';
 	}
 

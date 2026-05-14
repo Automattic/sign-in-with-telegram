@@ -88,6 +88,23 @@ class Bootstrap {
 		$profile_section->register();
 
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
+
+		add_action(
+			'admin_print_scripts-settings_page_' . self::PAGE_SLUG,
+			static function () use ( $settings ): void {
+				$data = array(
+					'settings'     => $settings->get_all(),
+					'settingsMeta' => array(
+						'client_id_source'     => $settings->get_client_id_source(),
+						'client_secret_source' => $settings->get_client_secret_source(),
+					),
+				);
+				printf(
+					'<script>window.telegramAuthData = %s;</script>',
+					wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode escapes appropriately for a script context.
+				);
+			}
+		);
 	}
 
 	/**

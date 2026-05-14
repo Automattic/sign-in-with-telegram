@@ -219,12 +219,12 @@ final class Settings_Test extends TestCase {
 	public function test_sanitize_preserves_empty_redirect_and_accepts_valid_mode(): void {
 		$sanitized = Settings::sanitize(
 			array(
-				'email_mode'          => 'require',
+				'email_mode'          => 'placeholder',
 				'post_login_redirect' => '',
 			)
 		);
 
-		$this->assertSame( 'require', $sanitized['email_mode'] );
+		$this->assertSame( 'placeholder', $sanitized['email_mode'] );
 		$this->assertSame( '', $sanitized['post_login_redirect'] );
 	}
 
@@ -268,6 +268,49 @@ final class Settings_Test extends TestCase {
 			'dm only'    => array( false, true, array( 'telegram:bot_access' ) ),
 			'both'       => array( true, true, array( 'phone', 'telegram:bot_access' ) ),
 		);
+	}
+
+	public function test_get_all_returns_defaults_when_option_is_empty(): void {
+		$all = ( new Settings() )->get_all();
+
+		$this->assertSame( '', $all['client_id'] );
+		$this->assertSame( '', $all['client_secret'] );
+		$this->assertTrue( $all['allow_signups'] );
+		$this->assertSame( 'none', $all['email_mode'] );
+	}
+
+	public function test_get_all_layers_stored_option_over_defaults(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'client_id'    => 'stored-id',
+			'button_label' => 'Custom',
+		);
+
+		$all = ( new Settings() )->get_all();
+
+		$this->assertSame( 'stored-id', $all['client_id'] );
+		$this->assertSame( 'Custom', $all['button_label'] );
+		// Untouched keys still take their default.
+		$this->assertSame( '', $all['client_secret'] );
+		$this->assertSame( 'none', $all['email_mode'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState(false)]
+	public function test_get_all_lets_wp_config_constants_override_stored_credentials(): void {
+		define( Settings::CLIENT_ID_CONSTANT, '111' );
+		define( Settings::CLIENT_SECRET_CONSTANT, 'constant-secret' );
+
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'client_id'     => 'stored-id',
+			'client_secret' => 'stored-secret',
+		);
+
+		$all = ( new Settings() )->get_all();
+
+		$this->assertSame( '111', $all['client_id'] );
+		$this->assertSame( 'constant-secret', $all['client_secret'] );
 	}
 
 	public function test_get_client_id_reads_option_then_null(): void {
@@ -316,27 +359,50 @@ final class Settings_Test extends TestCase {
 		$this->assertSame( 'constant-secret', $settings->get_client_secret() );
 	}
 
-	public function test_get_secret_source_reports_db_and_unset(): void {
+	public function test_get_client_id_source_reports_db_and_unset(): void {
 		$settings                     = new Settings();
 		$this->settings_option_exists = true;
-		$this->settings_option        = array( 'client_secret' => 'stored-secret' );
+		$this->settings_option        = array( 'client_id' => '123456789' );
 
-		$this->assertSame( 'db', $settings->get_secret_source() );
+		$this->assertSame( 'db', $settings->get_client_id_source() );
 
-		$this->settings_option = array( 'client_secret' => '' );
-		$this->assertSame( 'unset', $settings->get_secret_source() );
+		$this->settings_option = array( 'client_id' => '' );
+		$this->assertSame( 'unset', $settings->get_client_id_source() );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState(false)]
-	public function test_get_secret_source_reports_constant(): void {
+	public function test_get_client_id_source_reports_constant(): void {
+		define( Settings::CLIENT_ID_CONSTANT, '123456789' );
+
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'client_id' => '987654321' );
+
+		$this->assertSame( 'constant', $settings->get_client_id_source() );
+	}
+
+	public function test_get_client_secret_source_reports_db_and_unset(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'client_secret' => 'stored-secret' );
+
+		$this->assertSame( 'db', $settings->get_client_secret_source() );
+
+		$this->settings_option = array( 'client_secret' => '' );
+		$this->assertSame( 'unset', $settings->get_client_secret_source() );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState(false)]
+	public function test_get_client_secret_source_reports_constant(): void {
 		define( Settings::CLIENT_SECRET_CONSTANT, 'constant-secret' );
 
 		$settings                     = new Settings();
 		$this->settings_option_exists = true;
 		$this->settings_option        = array( 'client_secret' => 'stored-secret' );
 
-		$this->assertSame( 'constant', $settings->get_secret_source() );
+		$this->assertSame( 'constant', $settings->get_client_secret_source() );
 	}
 
 	public function test_register_hooks_the_settings_api_registration(): void {
