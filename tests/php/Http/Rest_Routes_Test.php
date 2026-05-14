@@ -93,32 +93,51 @@ final class Rest_Routes_Test extends TestCase {
 		$this->assertFalse( ( new Rest_Routes() )->permission_check() );
 	}
 
-	public function test_test_credentials_returns_ok_when_discovery_and_jwks_succeed(): void {
-		// Both endpoints respond with valid shapes.
+	/**
+	 * Wire up the wp_remote_* stubs the probe path needs. `$post_response`
+	 * is what wp_remote_post returns (the token-endpoint response we use
+	 * to probe credentials); leave it as the default `invalid_grant / 400`
+	 * shape to simulate authenticated-but-bogus-code (the success case
+	 * from the probe's perspective).
+	 *
+	 * @param array<string,mixed>|\WP_Error $post_response Override the token-endpoint response.
+	 */
+	private function stub_http( array|\WP_Error $post_response = array(
+		'response' => array( 'code' => 400 ),
+		'body'     => '{"error":"invalid_grant"}',
+	) ): void {
 		Functions\when( 'get_transient' )->justReturn( false );
 		Functions\when( 'set_transient' )->justReturn( true );
-		Functions\when( 'is_wp_error' )->justReturn( false );
-		Functions\when( 'wp_remote_retrieve_response_code' )->justReturn( 200 );
+		Functions\when( 'is_wp_error' )->alias(
+			static fn( $thing ) => $thing instanceof \WP_Error
+		);
+		Functions\when( 'wp_remote_retrieve_response_code' )->alias(
+			static fn( $response ) => is_array( $response ) ? ( $response['response']['code'] ?? 0 ) : 0
+		);
 		Functions\when( 'wp_remote_retrieve_body' )->alias(
-			static function ( $response ) {
-				return $response['body'] ?? '';
-			}
+			static fn( $response ) => is_array( $response ) ? ( $response['body'] ?? '' ) : ''
 		);
 		Functions\when( 'wp_remote_get' )->alias(
-			static function ( string $url ) {
+			static function () {
 				$discovery = array(
 					'issuer'                 => 'https://oauth.example.test',
 					'authorization_endpoint' => 'https://oauth.example.test/auth',
 					'token_endpoint'         => 'https://oauth.example.test/token',
 					'jwks_uri'               => 'https://oauth.example.test/jwks',
 				);
-				$jwks      = array( 'keys' => array( array( 'kid' => 'oidc-1' ) ) );
 				return array(
 					'response' => array( 'code' => 200 ),
-					'body'     => (string) wp_json_encode( str_ends_with( $url, 'openid-configuration' ) ? $discovery : $jwks ),
+					'body'     => (string) wp_json_encode( $discovery ),
 				);
 			}
 		);
+		Functions\when( 'wp_remote_post' )->justReturn( $post_response );
+	}
+
+	public function test_test_credentials_returns_ok_when_probe_accepts_credentials(): void {
+		// Token endpoint returns 400 invalid_grant — credentials authenticated,
+		// the deliberately-bogus code was rejected. That's the success case.
+		$this->stub_http();
 
 		$response = ( new Rest_Routes() )->handle_test_credentials(
 			new WP_REST_Request(
@@ -131,6 +150,51 @@ final class Rest_Routes_Test extends TestCase {
 
 		$this->assertInstanceOf( WP_REST_Response::class, $response );
 		$this->assertSame( array( 'ok' => true ), $response->get_data() );
+	}
+
+	public function test_test_credentials_returns_invalid_client_when_probe_rejects_credentials(): void {
+		// Token endpoint returns 401 invalid_client — credentials are wrong.
+		$this->stub_http(
+			array(
+				'response' => array( 'code' => 401 ),
+				'body'     => '{"error":"invalid_client"}',
+			)
+		);
+
+		$response = ( new Rest_Routes() )->handle_test_credentials(
+			new WP_REST_Request(
+				array(
+					'client_id'     => 'wrong',
+					'client_secret' => 'wrong',
+				)
+			)
+		);
+
+		$data = $response->get_data();
+		$this->assertFalse( $data['ok'] );
+		$this->assertSame( 'invalid_client', $data['reason'] );
+	}
+
+	public function test_test_credentials_returns_invalid_client_on_400_invalid_client_body(): void {
+		// Some IdPs return 400 (not 401) with invalid_client in the body.
+		// We pick that up via the body, not just the status.
+		$this->stub_http(
+			array(
+				'response' => array( 'code' => 400 ),
+				'body'     => '{"error":"invalid_client"}',
+			)
+		);
+
+		$response = ( new Rest_Routes() )->handle_test_credentials(
+			new WP_REST_Request(
+				array(
+					'client_id'     => 'wrong',
+					'client_secret' => 'wrong',
+				)
+			)
+		);
+
+		$this->assertSame( 'invalid_client', $response->get_data()['reason'] );
 	}
 
 	public function test_test_credentials_returns_failure_code_when_discovery_unreachable(): void {
@@ -153,18 +217,11 @@ final class Rest_Routes_Test extends TestCase {
 		);
 
 		$data = $response->get_data();
-		$this->assertIsArray( $data );
 		$this->assertFalse( $data['ok'] );
 		$this->assertSame( OIDC_Exception::PROVIDER_UNREACHABLE, $data['reason'] );
 	}
 
 	public function test_test_credentials_uses_posted_credentials_not_stored_ones(): void {
-		// Capture the wp_remote_post Authorization header used during the
-		// hypothetical token exchange. test-credentials doesn't actually
-		// exchange a code, but we confirm the *posted* client_id flows into
-		// the Config that constructs the Client. We do this by inspecting
-		// what URL the discovery call hits and verifying the surrounding
-		// code didn't pull from get_option / Settings.
 		$captured_get_option_keys = array();
 		Functions\when( 'get_option' )->alias(
 			function ( $key ) use ( &$captured_get_option_keys ) {
@@ -172,32 +229,47 @@ final class Rest_Routes_Test extends TestCase {
 				return false;
 			}
 		);
+
+		// Capture the Authorization header the probe sends so we can assert
+		// the *posted* credentials made it onto the wire.
+		$captured_auth = null;
 		Functions\when( 'get_transient' )->justReturn( false );
 		Functions\when( 'set_transient' )->justReturn( true );
-		Functions\when( 'is_wp_error' )->justReturn( false );
-		Functions\when( 'wp_remote_retrieve_response_code' )->justReturn( 200 );
+		Functions\when( 'is_wp_error' )->alias(
+			static fn( $thing ) => $thing instanceof \WP_Error
+		);
+		Functions\when( 'wp_remote_retrieve_response_code' )->alias(
+			static fn( $response ) => is_array( $response ) ? ( $response['response']['code'] ?? 0 ) : 0
+		);
 		Functions\when( 'wp_remote_retrieve_body' )->alias(
-			static function ( $response ) {
-				return $response['body'] ?? '';
-			}
+			static fn( $response ) => is_array( $response ) ? ( $response['body'] ?? '' ) : ''
 		);
 		Functions\when( 'wp_remote_get' )->alias(
-			static function ( string $url ) {
-				$discovery = array(
-					'issuer'                 => 'https://oauth.example.test',
-					'authorization_endpoint' => 'https://oauth.example.test/auth',
-					'token_endpoint'         => 'https://oauth.example.test/token',
-					'jwks_uri'               => 'https://oauth.example.test/jwks',
-				);
-				$jwks      = array( 'keys' => array( array( 'kid' => 'oidc-1' ) ) );
+			static function () {
 				return array(
 					'response' => array( 'code' => 200 ),
-					'body'     => (string) wp_json_encode( str_ends_with( $url, 'openid-configuration' ) ? $discovery : $jwks ),
+					'body'     => (string) wp_json_encode(
+						array(
+							'issuer'                 => 'https://oauth.example.test',
+							'authorization_endpoint' => 'https://oauth.example.test/auth',
+							'token_endpoint'         => 'https://oauth.example.test/token',
+							'jwks_uri'               => 'https://oauth.example.test/jwks',
+						)
+					),
+				);
+			}
+		);
+		Functions\when( 'wp_remote_post' )->alias(
+			function ( $url, $args ) use ( &$captured_auth ) {
+				$captured_auth = $args['headers']['Authorization'] ?? null;
+				return array(
+					'response' => array( 'code' => 400 ),
+					'body'     => '{"error":"invalid_grant"}',
 				);
 			}
 		);
 
-		$response = ( new Rest_Routes() )->handle_test_credentials(
+		( new Rest_Routes() )->handle_test_credentials(
 			new WP_REST_Request(
 				array(
 					'client_id'     => 'posted-id',
@@ -206,10 +278,8 @@ final class Rest_Routes_Test extends TestCase {
 			)
 		);
 
-		$this->assertSame( array( 'ok' => true ), $response->get_data() );
-		// Neither the plugin option nor the credentials are read from
-		// storage during test-credentials — the controller acts on the
-		// posted values alone.
+		$expected_auth = 'Basic ' . base64_encode( 'posted-id:posted-secret' );
+		$this->assertSame( $expected_auth, $captured_auth );
 		$this->assertNotContains( 'telegram_auth_settings', $captured_get_option_keys );
 	}
 }

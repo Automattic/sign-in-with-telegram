@@ -220,6 +220,74 @@ class Client {
 	}
 
 	/**
+	 * Probe whether the configured client_id / client_secret authenticate
+	 * against Telegram's token endpoint.
+	 *
+	 * Sends a deliberately-bogus authorization-code grant. Per RFC 6749 §5.2
+	 * the token endpoint MUST respond with `invalid_client` (typically HTTP
+	 * 401) when the client credentials fail to authenticate, and
+	 * `invalid_grant` (typically HTTP 400) when the credentials are fine but
+	 * the supplied code is bad — which it deliberately is here. We treat the
+	 * latter as "credentials accepted."
+	 *
+	 * This is the standard OAuth2 idiom for credential validation in the
+	 * absence of a real auth code, and what every "Test connection" button
+	 * in OIDC client UIs ends up doing under the hood.
+	 *
+	 * @return bool True if the credentials authenticated, false if they were rejected.
+	 *
+	 * @throws OIDC_Exception PROVIDER_UNREACHABLE on network / discovery failure.
+	 */
+	public function probe_credentials(): bool {
+		$discovery = $this->get_discovery();
+
+		$response = wp_remote_post(
+			$discovery['token_endpoint'],
+			array(
+				'timeout' => self::HTTP_TIMEOUT,
+				'headers' => array(
+					// HTTP Basic auth (RFC 7617) for OIDC client_secret_basic — base64 is part of the protocol, not obfuscation.
+					'Authorization' => 'Basic ' . base64_encode( $this->config->client_id . ':' . $this->config->client_secret ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+					'Accept'        => 'application/json',
+				),
+				'body'    => array(
+					'grant_type'    => 'authorization_code',
+					'code'          => 'telegram-auth-credentials-probe',
+					// Minimum PKCE verifier length (RFC 7636 §4.1: 43–128 chars).
+					'code_verifier' => str_repeat( 'a', 43 ),
+					'redirect_uri'  => $this->config->redirect_uri,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			throw new OIDC_Exception(
+				sprintf(
+					/* translators: %s: WP_Error message returned by the HTTP transport. */
+					esc_html__( 'Failed to reach the token endpoint while probing credentials: %s', 'telegram-auth' ),
+					esc_html( $response->get_error_message() )
+				),
+				OIDC_Exception::PROVIDER_UNREACHABLE
+			);
+		}
+
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		$body   = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+		$error  = is_array( $body ) ? ( $body['error'] ?? null ) : null;
+
+		// `invalid_client` (HTTP 401 per RFC 6749 §5.2, though some IdPs use
+		// 400) is the authoritative signal that the credentials didn't
+		// authenticate. Everything else means the client authenticated —
+		// the grant was rejected for some unrelated reason (`invalid_grant`
+		// against our deliberate bogus code, etc.).
+		if ( 'invalid_client' === $error || 401 === $status ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Fetch and cache the JWKS document.
 	 *
 	 * Token_Validator uses this to verify id_token signatures. Caching is

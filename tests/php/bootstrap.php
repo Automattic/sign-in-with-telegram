@@ -91,6 +91,20 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 	}
 }
 
+if ( ! class_exists( 'WP_REST_Server' ) ) {
+	/**
+	 * Minimal WP_REST_Server stand-in. Only the HTTP-method constants are
+	 * referenced from production code that runs in unit tests.
+	 */
+	class WP_REST_Server { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals -- Polyfilling WP core class.
+		public const READABLE  = 'GET';
+		public const EDITABLE  = 'POST, PUT, PATCH';
+		public const CREATABLE = 'POST';
+		public const DELETABLE = 'DELETE';
+		public const ALLMETHODS = 'GET, POST, PUT, PATCH, DELETE';
+	}
+}
+
 if ( ! class_exists( 'WP_REST_Response' ) ) {
 	/**
 	 * Minimal WP_REST_Response stand-in. Just stores data + status so
