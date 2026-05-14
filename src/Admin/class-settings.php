@@ -60,8 +60,9 @@ class Settings {
 			self::OPTION_KEY,
 			array(
 				'type'              => 'object',
-				'show_in_rest'      => false,
-				'schema'            => self::schema(),
+				'show_in_rest'      => array(
+					'schema' => self::schema(),
+				),
 				'sanitize_callback' => array( self::class, 'sanitize' ),
 				'default'           => self::defaults(),
 			)
@@ -86,10 +87,12 @@ class Settings {
 				'client_id'           => array(
 					'type'    => 'string',
 					'default' => '',
+					'format'  => 'text-field',
 				),
 				'client_secret'       => array(
 					'type'    => 'string',
 					'default' => '',
+					'format'  => 'text-field',
 				),
 				'default_role'        => array(
 					'type'    => 'string',
@@ -116,10 +119,12 @@ class Settings {
 				'button_label'        => array(
 					'type'    => 'string',
 					'default' => __( 'Sign in with Telegram', 'telegram-auth' ),
+					'format'  => 'text-field',
 				),
 				'post_login_redirect' => array(
 					'type'    => 'string',
 					'default' => '',
+					'format'  => 'uri',
 				),
 			),
 		);
@@ -150,17 +155,7 @@ class Settings {
 		$defaults = self::defaults();
 		$input    = array_merge( $defaults, $input );
 
-		return array(
-			'client_id'           => self::sanitize_optional_text( $input['client_id'] ),
-			'client_secret'       => self::sanitize_optional_text( $input['client_secret'] ),
-			'default_role'        => self::sanitize_role( $input['default_role'], $defaults['default_role'] ),
-			'allow_signups'       => rest_sanitize_boolean( $input['allow_signups'] ),
-			'email_mode'          => self::sanitize_email_mode( $input['email_mode'] ),
-			'request_phone'       => rest_sanitize_boolean( $input['request_phone'] ),
-			'request_dm'          => rest_sanitize_boolean( $input['request_dm'] ),
-			'button_label'        => self::sanitize_button_label( $input['button_label'], $defaults['button_label'] ),
-			'post_login_redirect' => self::sanitize_redirect( $input['post_login_redirect'] ),
-		);
+		return rest_sanitize_value_from_schema( $input, self::schema(), self::OPTION_KEY );
 	}
 
 	/**
@@ -169,14 +164,12 @@ class Settings {
 	 * @return string|null
 	 */
 	public function get_client_id(): ?string {
-		$constant = self::sanitize_optional_text(
-			defined( self::CLIENT_ID_CONSTANT ) ? constant( self::CLIENT_ID_CONSTANT ) : ''
-		);
-		if ( '' !== $constant ) {
+		$constant = defined( self::CLIENT_ID_CONSTANT ) ? constant( self::CLIENT_ID_CONSTANT ) : '';
+		if ( $constant ) {
 			return $constant;
 		}
 
-		$value = self::sanitize_optional_text( $this->get_setting_value( 'client_id' ) );
+		$value = $this->get_setting_value( 'client_id' );
 		return '' === $value ? null : $value;
 	}
 
@@ -186,14 +179,13 @@ class Settings {
 	 * @return string|null
 	 */
 	public function get_client_secret(): ?string {
-		$constant = self::sanitize_optional_text(
-			defined( self::CLIENT_SECRET_CONSTANT ) ? constant( self::CLIENT_SECRET_CONSTANT ) : ''
-		);
-		if ( '' !== $constant ) {
+		$constant = defined( self::CLIENT_SECRET_CONSTANT ) ? constant( self::CLIENT_SECRET_CONSTANT ) : '';
+		if ( $constant ) {
 			return $constant;
 		}
 
-		$value = self::sanitize_optional_text( $this->get_setting_value( 'client_secret' ) );
+		$value = $this->get_setting_value( 'client_secret' );
+
 		return '' === $value ? null : $value;
 	}
 
@@ -203,14 +195,12 @@ class Settings {
 	 * @return 'constant'|'db'|'unset'
 	 */
 	public function get_secret_source(): string {
-		$constant = self::sanitize_optional_text(
-			defined( self::CLIENT_SECRET_CONSTANT ) ? constant( self::CLIENT_SECRET_CONSTANT ) : ''
-		);
-		if ( '' !== $constant ) {
+		$constant = defined( self::CLIENT_SECRET_CONSTANT ) ? constant( self::CLIENT_SECRET_CONSTANT ) : '';
+		if ( $constant ) {
 			return 'constant';
 		}
 
-		$value = self::sanitize_optional_text( $this->get_setting_value( 'client_secret' ) );
+		$value = $this->get_setting_value( 'client_secret' );
 		return '' === $value ? 'unset' : 'db';
 	}
 
@@ -232,8 +222,7 @@ class Settings {
 	 * @return string
 	 */
 	public function get_default_role(): string {
-		$defaults = self::defaults();
-		return self::sanitize_role( $this->get_setting_value( 'default_role' ), $defaults['default_role'] );
+		return $this->get_setting_value( 'default_role' );
 	}
 
 	/**
@@ -265,17 +254,6 @@ class Settings {
 	}
 
 	/**
-	 * Check whether a string looks like a Telegram bot token.
-	 *
-	 * @param string $value Value to inspect.
-	 *
-	 * @return bool
-	 */
-	public static function is_bot_token_shape( string $value ): bool {
-		return 1 === preg_match( '/^\d+:[A-Za-z0-9_-]+$/', $value );
-	}
-
-	/**
 	 * Read one option value, falling back to the schema default.
 	 *
 	 * @param string $key Setting key.
@@ -294,86 +272,13 @@ class Settings {
 	}
 
 	/**
-	 * Sanitize optional text. Non-scalar input is treated as unset.
-	 *
-	 * @param mixed $value Raw value.
-	 *
-	 * @return string
-	 */
-	private static function sanitize_optional_text( mixed $value ): string {
-		if ( ! is_scalar( $value ) ) {
-			return '';
-		}
-
-		return sanitize_text_field( (string) $value );
-	}
-
-	/**
-	 * Sanitize the default role setting.
-	 *
-	 * @param mixed  $value    Raw role key.
-	 * @param string $fallback Role to use when the raw value is invalid.
-	 *
-	 * @return string
-	 */
-	private static function sanitize_role( mixed $value, string $fallback ): string {
-		$role = is_scalar( $value ) ? sanitize_key( (string) $value ) : '';
-		return array_key_exists( $role, self::roles() ) ? $role : $fallback;
-	}
-
-	/**
-	 * Sanitize the missing-email behavior mode.
-	 *
-	 * @param mixed $value Raw value.
-	 *
-	 * @return string
-	 */
-	private static function sanitize_email_mode( mixed $value ): string {
-		$mode = is_scalar( $value ) ? sanitize_key( (string) $value ) : '';
-		return in_array( $mode, self::EMAIL_MODES, true ) ? $mode : 'none';
-	}
-
-	/**
-	 * Sanitize the front-end login button label.
-	 *
-	 * @param mixed  $value    Raw label.
-	 * @param string $fallback Label to use when the raw value is empty.
-	 *
-	 * @return string
-	 */
-	private static function sanitize_button_label( mixed $value, string $fallback ): string {
-		$value = self::sanitize_optional_text( $value );
-		return '' === $value ? $fallback : $value;
-	}
-
-	/**
-	 * Sanitize the post-login redirect target.
-	 *
-	 * @param mixed $value Raw redirect value.
-	 *
-	 * @return string
-	 */
-	private static function sanitize_redirect( mixed $value ): string {
-		if ( ! is_scalar( $value ) ) {
-			return '';
-		}
-
-		$value = trim( (string) $value );
-		if ( '' === $value ) {
-			return '';
-		}
-
-		return wp_validate_redirect( esc_url_raw( $value ), home_url() );
-	}
-
-	/**
 	 * Return the best registered default role for new users.
 	 *
 	 * @return string
 	 */
 	private static function default_role(): string {
 		$roles = self::roles();
-		$role  = sanitize_key( (string) get_option( 'default_role', 'subscriber' ) );
+		$role  = get_option( 'default_role', 'subscriber' );
 
 		if ( array_key_exists( $role, $roles ) ) {
 			return $role;
