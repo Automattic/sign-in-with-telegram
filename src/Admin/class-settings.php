@@ -205,18 +205,6 @@ class Settings {
 	}
 
 	/**
-	 * Build the redirect URI we hand to Telegram's authorize endpoint.
-	 *
-	 * Always points at `wp-login.php?action=telegram_auth_callback`. The
-	 * caller is expected to register this exact URL in BotFather -> Web Login.
-	 *
-	 * @return string
-	 */
-	public function get_redirect_uri(): string {
-		return (string) add_query_arg( 'action', 'telegram_auth_callback', wp_login_url() );
-	}
-
-	/**
 	 * Default role assigned to users created via OIDC sign-up.
 	 *
 	 * @return string
@@ -249,7 +237,7 @@ class Settings {
 		return new Config(
 			client_id:     $client_id,
 			client_secret: $client_secret,
-			redirect_uri:  $this->get_redirect_uri(),
+			redirect_uri:  add_query_arg( 'action', 'telegram_auth_callback', wp_login_url() ),
 		);
 	}
 
