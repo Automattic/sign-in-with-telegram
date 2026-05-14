@@ -74,12 +74,23 @@ final class Settings_Test extends TestCase {
 		// Mock WP's schema-based sanitizer for the shapes Settings::schema()
 		// actually uses (object → properties; string with optional enum /
 		// format=text-field / format=uri; boolean). Self-contained so the
-		// rest of setUp doesn't need to stub sanitize_text_field /
-		// rest_sanitize_boolean / esc_url_raw individually. On enum
+		// sanitize tests don't need to stub sanitize_text_field /
+		// esc_url_raw individually. On enum
 		// violation, fall back to the property's default rather than
 		// returning a WP_Error, which is the behavior the settings UI
 		// relies on for graceful recovery from a stale payload.
 		Functions\when( 'rest_sanitize_value_from_schema' )->alias( self::sanitize_value_from_schema( ... ) );
+		Functions\when( 'rest_sanitize_boolean' )->alias(
+			static function ( $value ): bool {
+				if ( is_bool( $value ) ) {
+					return $value;
+				}
+				if ( is_string( $value ) ) {
+					return ! in_array( strtolower( $value ), array( '', '0', 'false' ), true );
+				}
+				return (bool) $value;
+			}
+		);
 	}
 
 	/**
@@ -215,6 +226,48 @@ final class Settings_Test extends TestCase {
 
 		$this->assertSame( 'require', $sanitized['email_mode'] );
 		$this->assertSame( '', $sanitized['post_login_redirect'] );
+	}
+
+	public function test_scope_accessors_read_sanitized_settings(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'request_phone' => '1',
+			'request_dm'    => '0',
+		);
+
+		$this->assertTrue( $settings->request_phone() );
+		$this->assertFalse( $settings->request_dm() );
+	}
+
+	/**
+	 * @dataProvider requested_optional_scopes_provider
+	 *
+	 * @param bool     $request_phone Whether phone should be requested.
+	 * @param bool     $request_dm    Whether DM access should be requested.
+	 * @param string[] $expected      Expected optional scopes.
+	 */
+	public function test_requested_optional_scopes_reflects_scope_toggles( bool $request_phone, bool $request_dm, array $expected ): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'request_phone' => $request_phone,
+			'request_dm'    => $request_dm,
+		);
+
+		$this->assertSame( $expected, $settings->requested_optional_scopes() );
+	}
+
+	/**
+	 * @return array<string,array{0:bool,1:bool,2:string[]}>
+	 */
+	public static function requested_optional_scopes_provider(): array {
+		return array(
+			'none'       => array( false, false, array() ),
+			'phone only' => array( true, false, array( 'phone' ) ),
+			'dm only'    => array( false, true, array( 'telegram:bot_access' ) ),
+			'both'       => array( true, true, array( 'phone', 'telegram:bot_access' ) ),
+		);
 	}
 
 	public function test_get_client_id_reads_option_then_null(): void {

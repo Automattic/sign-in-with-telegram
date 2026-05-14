@@ -223,6 +223,40 @@ class Settings {
 	}
 
 	/**
+	 * Whether to request Telegram's phone scope.
+	 *
+	 * @return bool
+	 */
+	public function request_phone(): bool {
+		return rest_sanitize_boolean( $this->get_setting_value( 'request_phone' ) );
+	}
+
+	/**
+	 * Whether to request Telegram bot DM access.
+	 *
+	 * @return bool
+	 */
+	public function request_dm(): bool {
+		return rest_sanitize_boolean( $this->get_setting_value( 'request_dm' ) );
+	}
+
+	/**
+	 * Optional OIDC scopes requested by the current settings.
+	 *
+	 * @return string[]
+	 */
+	public function requested_optional_scopes(): array {
+		$scopes = array();
+		if ( $this->request_phone() ) {
+			$scopes[] = 'phone';
+		}
+		if ( $this->request_dm() ) {
+			$scopes[] = 'telegram:bot_access';
+		}
+		return $scopes;
+	}
+
+	/**
 	 * Build a fully-populated OIDC Config from settings, or null if either
 	 * of the two required credentials is missing.
 	 *

@@ -81,13 +81,14 @@ class Transaction {
 	 * code_verifier + intent + user_id in a single-use transient, and sets
 	 * a cookie carrying the transient id.
 	 *
-	 * @param string   $intent      'login' for the sign-in flow, 'link' for the connect-existing-account flow.
-	 * @param int|null $user_id     The current user id when intent === 'link'; null otherwise.
-	 * @param string   $redirect_to Post-login destination (already-sanitized URL). Empty string when the surface didn't supply one.
+	 * @param string   $intent                    'login' for the sign-in flow, 'link' for the connect-existing-account flow.
+	 * @param int|null $user_id                   The current user id when intent === 'link'; null otherwise.
+	 * @param string   $redirect_to               Post-login destination (already-sanitized URL). Empty string when the surface didn't supply one.
+	 * @param string[] $requested_optional_scopes Optional scopes requested at authorize time.
 	 *
 	 * @return Started_Transaction Public-facing values for the authorize URL.
 	 */
-	public function start( string $intent, ?int $user_id = null, string $redirect_to = '' ): Started_Transaction {
+	public function start( string $intent, ?int $user_id = null, string $redirect_to = '', array $requested_optional_scopes = array() ): Started_Transaction {
 		$state          = self::random_token();
 		$nonce          = self::random_token();
 		$code_verifier  = self::random_token();
@@ -96,13 +97,14 @@ class Transaction {
 		$ttl            = $this->ttl();
 
 		$payload = array(
-			'state'         => $state,
-			'nonce'         => $nonce,
-			'code_verifier' => $code_verifier,
-			'intent'        => $intent,
-			'user_id'       => $user_id,
-			'redirect_to'   => $redirect_to,
-			'created_at'    => time(),
+			'state'                     => $state,
+			'nonce'                     => $nonce,
+			'code_verifier'             => $code_verifier,
+			'intent'                    => $intent,
+			'user_id'                   => $user_id,
+			'redirect_to'               => $redirect_to,
+			'requested_optional_scopes' => self::sanitize_requested_optional_scopes( $requested_optional_scopes ),
+			'created_at'                => time(),
 		);
 
 		set_transient( self::TRANSIENT_PREFIX . $random_id, $payload, $ttl );
@@ -155,12 +157,31 @@ class Transaction {
 		}
 
 		return new Consumed_Transaction(
-			nonce:         (string) $payload['nonce'],
-			code_verifier: (string) $payload['code_verifier'],
-			intent:        (string) $payload['intent'],
-			user_id:       isset( $payload['user_id'] ) ? (int) $payload['user_id'] : null,
-			redirect_to:   isset( $payload['redirect_to'] ) ? (string) $payload['redirect_to'] : '',
+			nonce:                     (string) $payload['nonce'],
+			code_verifier:             (string) $payload['code_verifier'],
+			intent:                    (string) $payload['intent'],
+			user_id:                   isset( $payload['user_id'] ) ? (int) $payload['user_id'] : null,
+			redirect_to:               isset( $payload['redirect_to'] ) ? (string) $payload['redirect_to'] : '',
+			requested_optional_scopes: isset( $payload['requested_optional_scopes'] ) && is_array( $payload['requested_optional_scopes'] ) ? $payload['requested_optional_scopes'] : array(),
 		);
+	}
+
+	/**
+	 * Keep only the optional scope names this plugin can request.
+	 *
+	 * @param string[] $scopes Requested scope list.
+	 *
+	 * @return string[]
+	 */
+	private static function sanitize_requested_optional_scopes( array $scopes ): array {
+		$allowed = array( 'phone', 'telegram:bot_access' );
+		$clean   = array();
+		foreach ( $scopes as $scope ) {
+			if ( is_string( $scope ) && in_array( $scope, $allowed, true ) ) {
+				$clean[] = $scope;
+			}
+		}
+		return array_values( array_unique( $clean ) );
 	}
 
 	/**
