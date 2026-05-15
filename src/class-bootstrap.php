@@ -17,6 +17,7 @@ use Telegram_Auth\Auth\Login_Handler;
 use Telegram_Auth\Auth\Transaction;
 use Telegram_Auth\Http\Endpoints;
 use Telegram_Auth\Http\Failure_Renderer;
+use Telegram_Auth\Privacy\Personal_Data;
 use Telegram_Auth\UI\Avatar_Provider;
 use Telegram_Auth\UI\Login_Button;
 use Telegram_Auth\UI\Login_Button_Block;
@@ -78,6 +79,7 @@ class Bootstrap {
 		$login_button_block = new Login_Button_Block( $login_button );
 		$avatar_provider    = new Avatar_Provider();
 		$profile_section    = new Profile_Section();
+		$personal_data      = new Personal_Data();
 
 		$settings->register();
 		$endpoints->register();
@@ -86,6 +88,7 @@ class Bootstrap {
 		$login_button_block->register();
 		$avatar_provider->register();
 		$profile_section->register();
+		$personal_data->register();
 
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 	}
