@@ -154,7 +154,12 @@ class Settings {
 				),
 				'button_label'        => array(
 					'type'    => 'string',
-					'default' => __( 'Sign in with Telegram', 'telegram-auth' ),
+					// Not translated at schema time: schema() runs from
+					// `init` callbacks, where WP 6.7+ warns about
+					// just-in-time textdomain loading. Settings::get_button_label()
+					// wraps this value in __() at read time so translation
+					// still happens when the option is unset.
+					'default' => 'Sign in with Telegram',
 					'format'  => 'text-field',
 				),
 				'post_login_redirect' => array(

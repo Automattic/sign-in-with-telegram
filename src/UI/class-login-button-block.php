@@ -65,10 +65,28 @@ class Login_Button_Block {
 	}
 
 	/**
-	 * Enqueue the editor-side script module that calls registerBlockType.
+	 * Enqueue the editor-side script module that calls registerBlockType,
+	 * and inject the inherited defaults the inspector reads as placeholder
+	 * values. Inline data avoids a REST round-trip in the editor and an
+	 * empty-cache footgun when the request fails.
+	 *
+	 * The defaults ride on the `wp-block-editor` classic script (always
+	 * present in the editor) via wp_add_inline_script. WP queues the
+	 * tag for the right place in the head, so we don't risk flushing
+	 * output before the request's response headers commit.
 	 */
 	public function enqueue_editor_module(): void {
 		wp_enqueue_script_module( self::EDITOR_MODULE_ID );
+
+		$data = array(
+			'buttonLabel'       => $this->settings->get_button_label(),
+			'postLoginRedirect' => $this->settings->get_post_login_redirect(),
+		);
+		wp_add_inline_script(
+			'wp-block-editor',
+			'window.telegramAuthBlockDefaults = ' . wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE ) . ';',
+			'before'
+		);
 	}
 
 	/**
@@ -97,6 +115,10 @@ class Login_Button_Block {
 	 * @return string Rendered HTML, wrapped in the block-supplied wrapper attributes.
 	 */
 	public function render( array $attributes ): string {
+		if ( ! $this->settings->is_configured() ) {
+			return '';
+		}
+
 		// Sanitize at the boundary — same posture as the shortcode handler.
 		$label = isset( $attributes['label'] )
 			? trim( sanitize_text_field( (string) $attributes['label'] ) )
@@ -107,7 +129,10 @@ class Login_Button_Block {
 
 		$redirect_to = isset( $attributes['redirectTo'] )
 			? esc_url_raw( (string) $attributes['redirectTo'] )
-			: $this->settings->get_post_login_redirect();
+			: '';
+		if ( '' === $redirect_to ) {
+			$redirect_to = $this->settings->get_post_login_redirect();
+		}
 
 		$button = $this->login_button->render( $label, $redirect_to );
 

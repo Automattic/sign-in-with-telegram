@@ -78,28 +78,17 @@ class Bootstrap {
 		$login_button       = new Login_Button( $settings );
 		$login_button_block = new Login_Button_Block( $login_button, $settings );
 		$avatar_provider    = new Avatar_Provider();
-		$profile_section    = new Profile_Section();
+		$profile_section    = new Profile_Section( $settings );
 		$users_list_columns = new Users_List_Columns( $settings );
 
-		// Always-on: settings schema + REST, OIDC endpoints (they fail
-		// closed safely when unconfigured), failure renderer, avatar
-		// provider (it reads already-stored usermeta), and the users
-		// list column for already-linked accounts.
 		$settings->register();
 		$endpoints->register();
 		$failure_renderer->register();
 		$avatar_provider->register();
 		$users_list_columns->register();
-
-		// Public-facing entry points only matter when the plugin can
-		// actually complete the OIDC handshake. Without both
-		// credentials a "Sign in with Telegram" button or profile
-		// connect link can only mislead — so don't even hook them.
-		if ( $settings->is_configured() ) {
-			$login_button->register();
-			$login_button_block->register();
-			$profile_section->register();
-		}
+		$login_button->register();
+		$login_button_block->register();
+		$profile_section->register();
 
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 
@@ -120,7 +109,7 @@ class Bootstrap {
 				);
 				printf(
 					'<script>window.telegramAuthData = %s;</script>',
-					wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode escapes appropriately for a script context.
+					wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode escapes appropriately for a script context.
 				);
 			}
 		);

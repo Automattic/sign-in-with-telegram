@@ -47,7 +47,10 @@ final class Login_Button_Test extends TestCase {
 		);
 		Functions\when( 'get_option' )->alias(
 			static fn( string $key, $default = false ) => match ( $key ) {
-				'telegram_auth_settings' => array(),
+				'telegram_auth_settings' => array(
+					'client_id'     => '12345',
+					'client_secret' => 'secret',
+				),
 				'default_role'           => 'subscriber',
 				default                  => $default,
 			}

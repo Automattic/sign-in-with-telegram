@@ -42,7 +42,10 @@ final class Login_Button_Block_Test extends TestCase {
 		Functions\when( 'get_block_wrapper_attributes' )->justReturn( 'class="wp-block-telegram-auth-login-button"' );
 		Functions\when( 'get_option' )->alias(
 			static fn( string $key, $default = false ) => match ( $key ) {
-				'telegram_auth_settings' => array(),
+				'telegram_auth_settings' => array(
+					'client_id'     => '12345',
+					'client_secret' => 'secret',
+				),
 				'default_role'           => 'subscriber',
 				default                  => $default,
 			}

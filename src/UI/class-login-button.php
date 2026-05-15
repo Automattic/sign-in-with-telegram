@@ -52,6 +52,10 @@ class Login_Button {
 	 * @return string Rendered HTML.
 	 */
 	public function render_shortcode( $attrs = array(), $content = null ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter -- $content is part of the shortcode-callback contract.
+		if ( ! $this->settings->is_configured() ) {
+			return '';
+		}
+
 		$resolved = shortcode_atts(
 			array(
 				'label'       => $this->settings->get_button_label(),
@@ -75,6 +79,9 @@ class Login_Button {
 	 * Gated by the `telegram_auth_show_on_login_form` filter (default true).
 	 */
 	public function render_on_login_form(): void {
+		if ( ! $this->settings->is_configured() ) {
+			return;
+		}
 		/**
 		 * Filter whether the Telegram sign-in button auto-renders on wp-login.php.
 		 *
