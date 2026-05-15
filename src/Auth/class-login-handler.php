@@ -360,6 +360,22 @@ class Login_Handler {
 				update_user_meta( $user->ID, self::USERMETA_PICTURE_URL, $picture );
 			}
 		}
+
+		$this->maybe_save_phone_number( $user->ID, $claims );
+	}
+
+	/**
+	 * Save Telegram's phone_number claim to billing_phone, but only if the user doesn't already have a value there.
+	 *
+	 * @param int                 $user_id Target user id.
+	 * @param array<string,mixed> $claims  Validated id_token claims.
+	 */
+	private function maybe_save_phone_number( int $user_id, array $claims ): void {
+		$phone = $this->sanitize_phone_number_claim( $claims );
+		if ( '' === $phone ) {
+			return;
+		}
+		add_user_meta( $user_id, 'billing_phone', $phone, true );
 	}
 
 	/**
@@ -398,10 +414,7 @@ class Login_Handler {
 
 		update_user_meta( (int) $user_id, self::USERMETA_SUB, $sub );
 
-		$phone = $this->sanitize_phone_number_claim( $claims );
-		if ( '' !== $phone ) {
-			update_user_meta( (int) $user_id, 'billing_phone', $phone );
-		}
+		$this->maybe_save_phone_number( (int) $user_id, $claims );
 
 		if ( ! empty( $claims['picture'] ) && is_string( $claims['picture'] ) ) {
 			$picture = esc_url_raw( $claims['picture'] );
