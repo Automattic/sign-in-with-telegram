@@ -85,6 +85,7 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 			id: 'client_secret',
 			label: __('Client Secret', 'telegram-auth'),
 			type: 'password',
+			placeholder: '*'.repeat(32),
 			description:
 				meta.client_secret_source === 'constant'
 					? createInterpolateElement(

@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace Telegram_Auth\Admin;
 
 use Telegram_Auth\OIDC\Config;
+use WP_REST_Request;
+use WP_REST_Response;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -45,6 +47,40 @@ class Settings {
 	 */
 	public function register(): void {
 		add_action( 'init', array( self::class, 'register_setting' ) );
+		add_filter( 'rest_request_after_callbacks', array( self::class, 'redact_in_rest_response' ), 10, 3 );
+	}
+
+	/**
+	 * Strip `client_secret` out of the `/wp/v2/settings` REST response.
+	 *
+	 * @param mixed               $response Response value returned by the REST handler.
+	 * @param array<string,mixed> $handler  Handler that produced the response.
+	 * @param \WP_REST_Request    $request  Originating request.
+	 *
+	 * @return mixed
+	 */
+	public static function redact_in_rest_response( $response, $handler, $request ) {
+		unset( $handler );
+		if ( ! $request instanceof WP_REST_Request ) {
+			return $response;
+		}
+		if ( '/wp/v2/settings' !== $request->get_route() ) {
+			return $response;
+		}
+
+		if ( $response instanceof WP_REST_Response ) {
+			$data = $response->get_data();
+			if ( is_array( $data ) && isset( $data[ self::OPTION_KEY ] ) && is_array( $data[ self::OPTION_KEY ] ) ) {
+				$data[ self::OPTION_KEY ] = self::redact_for_display( $data[ self::OPTION_KEY ] );
+				$response->set_data( $data );
+			}
+			return $response;
+		}
+
+		if ( is_array( $response ) && isset( $response[ self::OPTION_KEY ] ) && is_array( $response[ self::OPTION_KEY ] ) ) {
+			$response[ self::OPTION_KEY ] = self::redact_for_display( $response[ self::OPTION_KEY ] );
+		}
+		return $response;
 	}
 
 	/**
@@ -157,18 +193,36 @@ class Settings {
 			? array_merge( self::defaults(), $stored )
 			: self::defaults();
 
+		/*
+		 * "Leave blank to keep" for the secret. The UI redacts it
+		 * to an empty string on every render, so submitting the form
+		 * without typing always carries client_secret = ''. Treat that
+		 * as "no change" rather than "clear the stored secret" —
+		 * clearing has to be done via wp-cli.
+		 */
+		if ( isset( $input['client_secret'] ) && '' === $input['client_secret'] ) {
+			unset( $input['client_secret'] );
+		}
+
+		/*
+		 * Credentials managed by wp-config constants are
+		 * managed-elsewhere — they must never be persisted to the
+		 * options row, regardless of what the form submitted.
+		 */
+		if ( defined( self::CLIENT_ID_CONSTANT ) && constant( self::CLIENT_ID_CONSTANT ) ) {
+			unset( $input['client_id'] );
+		}
+		if ( defined( self::CLIENT_SECRET_CONSTANT ) && constant( self::CLIENT_SECRET_CONSTANT ) ) {
+			unset( $input['client_secret'] );
+		}
+
 		$merged = array_merge( $base, $input );
 
 		return rest_sanitize_value_from_schema( $merged, self::schema(), self::OPTION_KEY );
 	}
 
 	/**
-	 * Return the complete effective settings array.
-	 *
-	 * Merges defaults → stored option → wp-config constant overrides for
-	 * `client_id` / `client_secret`, so callers get a single source of
-	 * truth that already reflects the constant pinning. Used by the
-	 * settings UI bootstrap to seed the form without a REST round-trip.
+	 * Return the effective settings for surfacing to the admin UI.
 	 *
 	 * @return array<string,mixed>
 	 */
@@ -182,11 +236,19 @@ class Settings {
 		if ( null !== $client_id ) {
 			$settings['client_id'] = $client_id;
 		}
-		$client_secret = $this->get_client_secret();
-		if ( null !== $client_secret ) {
-			$settings['client_secret'] = $client_secret;
-		}
 
+		return self::redact_for_display( $settings );
+	}
+
+	/**
+	 * Apply the redaction policy used everywhere the settings are surfaced.
+	 *
+	 * @param array<string,mixed> $settings Raw settings array.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function redact_for_display( array $settings ): array {
+		$settings['client_secret'] = '';
 		return $settings;
 	}
 

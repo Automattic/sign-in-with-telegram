@@ -270,6 +270,61 @@ final class Settings_Test extends TestCase {
 		);
 	}
 
+	public function test_sanitize_keeps_stored_client_secret_when_input_is_blank(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'client_secret' => 'stored-secret',
+		);
+
+		$sanitized = Settings::sanitize(
+			array(
+				'client_secret' => '',
+				'button_label'  => 'Updated',
+			)
+		);
+
+		$this->assertSame( 'stored-secret', $sanitized['client_secret'] );
+		$this->assertSame( 'Updated', $sanitized['button_label'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState(false)]
+	public function test_sanitize_ignores_client_id_input_when_managed_by_constant(): void {
+		define( Settings::CLIENT_ID_CONSTANT, 'from-constant' );
+
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'client_id' => 'stored-id',
+		);
+
+		$sanitized = Settings::sanitize(
+			array(
+				'client_id' => 'attacker-controlled',
+			)
+		);
+
+		$this->assertSame( 'stored-id', $sanitized['client_id'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState(false)]
+	public function test_sanitize_ignores_client_secret_input_when_managed_by_constant(): void {
+		define( Settings::CLIENT_SECRET_CONSTANT, 'from-constant' );
+
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'client_secret' => 'stored-secret',
+		);
+
+		$sanitized = Settings::sanitize(
+			array(
+				'client_secret' => 'attacker-controlled',
+			)
+		);
+
+		$this->assertSame( 'stored-secret', $sanitized['client_secret'] );
+	}
+
 	public function test_get_all_returns_defaults_when_option_is_empty(): void {
 		$all = ( new Settings() )->get_all();
 
@@ -297,20 +352,40 @@ final class Settings_Test extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState(false)]
-	public function test_get_all_lets_wp_config_constants_override_stored_credentials(): void {
+	public function test_get_all_lets_wp_config_client_id_constant_override_stored_value(): void {
 		define( Settings::CLIENT_ID_CONSTANT, '111' );
-		define( Settings::CLIENT_SECRET_CONSTANT, 'constant-secret' );
 
 		$this->settings_option_exists = true;
 		$this->settings_option        = array(
-			'client_id'     => 'stored-id',
-			'client_secret' => 'stored-secret',
+			'client_id' => 'stored-id',
 		);
 
 		$all = ( new Settings() )->get_all();
 
 		$this->assertSame( '111', $all['client_id'] );
-		$this->assertSame( 'constant-secret', $all['client_secret'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState(false)]
+	public function test_get_all_blanks_client_secret_even_when_stored(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array(
+			'client_secret' => 'stored-secret',
+		);
+
+		$all = ( new Settings() )->get_all();
+
+		$this->assertSame( '', $all['client_secret'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState(false)]
+	public function test_get_all_blanks_client_secret_even_when_managed_by_constant(): void {
+		define( Settings::CLIENT_SECRET_CONSTANT, 'constant-secret' );
+
+		$all = ( new Settings() )->get_all();
+
+		$this->assertSame( '', $all['client_secret'] );
 	}
 
 	public function test_get_client_id_reads_option_then_null(): void {
