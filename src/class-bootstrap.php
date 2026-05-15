@@ -13,6 +13,7 @@ namespace Telegram_Auth;
 
 use Automattic\Jetpack\WP_Build_Polyfills\WP_Build_Polyfills;
 use Telegram_Auth\Admin\Settings;
+use Telegram_Auth\Admin\Users_List_Columns;
 use Telegram_Auth\Auth\Login_Handler;
 use Telegram_Auth\Auth\Transaction;
 use Telegram_Auth\Http\Endpoints;
@@ -78,6 +79,7 @@ class Bootstrap {
 		$login_button_block = new Login_Button_Block( $login_button );
 		$avatar_provider    = new Avatar_Provider();
 		$profile_section    = new Profile_Section();
+		$users_list_columns = new Users_List_Columns( $settings );
 
 		$settings->register();
 		$endpoints->register();
@@ -86,6 +88,7 @@ class Bootstrap {
 		$login_button_block->register();
 		$avatar_provider->register();
 		$profile_section->register();
+		$users_list_columns->register();
 
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 	}
