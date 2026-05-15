@@ -76,19 +76,30 @@ class Bootstrap {
 		$login_handler      = new Login_Handler( $settings, $transaction, $failure_renderer );
 		$endpoints          = new Endpoints( $settings, $transaction, $login_handler, $failure_renderer );
 		$login_button       = new Login_Button( $settings );
-		$login_button_block = new Login_Button_Block( $login_button );
+		$login_button_block = new Login_Button_Block( $login_button, $settings );
 		$avatar_provider    = new Avatar_Provider();
 		$profile_section    = new Profile_Section();
 		$users_list_columns = new Users_List_Columns( $settings );
 
+		// Always-on: settings schema + REST, OIDC endpoints (they fail
+		// closed safely when unconfigured), failure renderer, avatar
+		// provider (it reads already-stored usermeta), and the users
+		// list column for already-linked accounts.
 		$settings->register();
 		$endpoints->register();
 		$failure_renderer->register();
-		$login_button->register();
-		$login_button_block->register();
 		$avatar_provider->register();
-		$profile_section->register();
 		$users_list_columns->register();
+
+		// Public-facing entry points only matter when the plugin can
+		// actually complete the OIDC handshake. Without both
+		// credentials a "Sign in with Telegram" button or profile
+		// connect link can only mislead — so don't even hook them.
+		if ( $settings->is_configured() ) {
+			$login_button->register();
+			$login_button_block->register();
+			$profile_section->register();
+		}
 
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 

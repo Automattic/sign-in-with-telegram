@@ -287,6 +287,68 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( 'token_invalid', $result->get_error_code() );
 	}
 
+	public function test_resolve_user_creates_user_with_placeholder_email_when_email_mode_is_placeholder(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'username_exists' )->justReturn( false );
+		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
+		Functions\when( 'home_url' )->justReturn( 'https://example.test' );
+		Functions\when( 'wp_parse_url' )->alias(
+			static fn( string $url, int $component = -1 ) => parse_url( $url, $component )
+		);
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_auth_settings' => array( 'email_mode' => 'placeholder' ),
+				'default_role'           => 'subscriber',
+				default                  => $default,
+			}
+		);
+
+		$inserted = null;
+		Functions\when( 'wp_insert_user' )->alias(
+			function ( array $args ) use ( &$inserted ) {
+				$inserted = $args;
+				return 99;
+			}
+		);
+		$created     = new \WP_User();
+		$created->ID = 99; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+		Functions\when( 'get_user_by' )->justReturn( $created );
+
+		$this->make_handler()->resolve_user( self::valid_claims( 'tg-789' ), self::consumed() );
+
+		$this->assertNotNull( $inserted );
+		$this->assertSame( 'tg_tg-789@users.noreply.example.test', $inserted['user_email'] );
+	}
+
+	public function test_resolve_user_creates_user_with_empty_email_when_email_mode_is_none(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'username_exists' )->justReturn( false );
+		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_auth_settings' => array( 'email_mode' => 'none' ),
+				'default_role'           => 'subscriber',
+				default                  => $default,
+			}
+		);
+
+		$inserted = null;
+		Functions\when( 'wp_insert_user' )->alias(
+			function ( array $args ) use ( &$inserted ) {
+				$inserted = $args;
+				return 100;
+			}
+		);
+		$created     = new \WP_User();
+		$created->ID = 100; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+		Functions\when( 'get_user_by' )->justReturn( $created );
+
+		$this->make_handler()->resolve_user( self::valid_claims(), self::consumed() );
+
+		$this->assertNotNull( $inserted );
+		$this->assertSame( '', $inserted['user_email'] );
+	}
+
 	public function test_resolve_user_attaches_new_sub_to_currently_logged_in_user_instead_of_creating_one(): void {
 		$current     = new \WP_User();
 		$current->ID = 7; // phpcs:ignore Squiz.NamingConventions.ValidVariableName

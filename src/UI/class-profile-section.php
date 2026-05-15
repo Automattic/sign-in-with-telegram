@@ -66,7 +66,7 @@ class Profile_Section {
 					<?php elseif ( get_current_user_id() === $user->ID ) : ?>
 						<p><?php esc_html_e( 'Your account is not connected to Telegram.', 'telegram-auth' ); ?></p>
 						<p>
-							<a href="<?php echo esc_url( self::link_url() ); ?>" class="button button-primary">
+							<a href="<?php echo esc_url( self::link_url() ); ?>" class="button button-secondary">
 								<?php esc_html_e( 'Connect Telegram', 'telegram-auth' ); ?>
 							</a>
 						</p>

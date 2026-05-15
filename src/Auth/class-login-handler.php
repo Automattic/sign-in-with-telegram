@@ -167,11 +167,19 @@ class Login_Handler {
 			)
 		);
 
-		// Honour the post-login destination the start surface requested,
-		// falling back to wp-admin/. wp_safe_redirect downgrades cross-host
-		// targets (anything not on `allowed_redirect_hosts`) to the home URL,
-		// so the stored value can't open-redirect a victim off-site.
-		$destination = '' !== $tx->redirect_to ? $tx->redirect_to : admin_url();
+		// Honour the post-login destination, falling back through the
+		// per-request `redirect_to` (set by the start surface) → the
+		// site-wide `post_login_redirect` option → wp-admin/.
+		// wp_safe_redirect downgrades cross-host targets (anything not on
+		// `allowed_redirect_hosts`) to the home URL, so neither value can
+		// open-redirect a victim off-site.
+		$destination = $tx->redirect_to;
+		if ( '' === $destination ) {
+			$destination = $this->settings->get_post_login_redirect();
+		}
+		if ( '' === $destination ) {
+			$destination = admin_url();
+		}
 		wp_safe_redirect( $destination );
 		exit;
 	}
@@ -358,8 +366,8 @@ class Login_Handler {
 	 * Create a new WP user from validated id_token claims.
 	 *
 	 * Username generated defensively (never trusts `preferred_username`),
-	 * email left empty (Telegram never supplies one and `wp_insert_user`
-	 * accepts an empty `user_email`), role per Settings::get_default_role().
+	 * email derived from {@see Settings::get_email_mode()} since Telegram
+	 * doesn't supply one, role per {@see Settings::get_default_role()}.
 	 * First/last/display name and picture URL come from the `name` and
 	 * `picture` claims when present.
 	 *
@@ -374,7 +382,7 @@ class Login_Handler {
 		$args     = array(
 			'user_login' => $username,
 			'user_pass'  => wp_generate_password( 32, true, true ),
-			'user_email' => '',
+			'user_email' => $this->derive_user_email( $sub ),
 			'role'       => $this->settings->get_default_role(),
 		);
 
@@ -406,6 +414,38 @@ class Login_Handler {
 		return $user instanceof WP_User
 			? $user
 			: new WP_Error( 'token_invalid', __( 'Could not load freshly-created user.', 'telegram-auth' ) );
+	}
+
+	/**
+	 * Derive the `user_email` value for a freshly-created Telegram user.
+	 *
+	 * Telegram's OIDC provider never returns an email claim, so the
+	 * `email_mode` setting picks what to store:
+	 *  - `none` (default): empty string. `wp_insert_user` accepts that;
+	 *    password-recovery is unavailable until the user sets an email
+	 *    themselves.
+	 *  - `placeholder`: a non-routable address of the form
+	 *    `tg_<sub>@users.noreply.<host>` so password-recovery flows have
+	 *    something to send to (it bounces, but core's UI doesn't error
+	 *    out the way it does with no email at all). The host segment
+	 *    comes from `home_url()` so the synthesized domain is tied to
+	 *    the site, not its parent network.
+	 *
+	 * @param string $sub Telegram subject identifier.
+	 *
+	 * @return string
+	 */
+	private function derive_user_email( string $sub ): string {
+		if ( 'placeholder' !== $this->settings->get_email_mode() ) {
+			return '';
+		}
+
+		$host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		if ( '' === $host ) {
+			$host = 'localhost';
+		}
+
+		return sprintf( 'tg_%s@users.noreply.%s', $sub, $host );
 	}
 
 	/**

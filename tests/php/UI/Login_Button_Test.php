@@ -45,6 +45,18 @@ final class Login_Button_Test extends TestCase {
 		Functions\when( 'apply_filters' )->alias(
 			static fn( string $name, $value ) => $value
 		);
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_auth_settings' => array(),
+				'default_role'           => 'subscriber',
+				default                  => $default,
+			}
+		);
+		Functions\when( 'wp_roles' )->justReturn(
+			(object) array(
+				'roles' => array( 'subscriber' => array( 'name' => 'Subscriber' ) ),
+			)
+		);
 	}
 
 	protected function tearDown(): void {

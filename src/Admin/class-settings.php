@@ -253,6 +253,15 @@ class Settings {
 	}
 
 	/**
+	 * Whether the plugin has both credentials available (from either the PHP constants or the DB
+	 *
+	 * @return bool
+	 */
+	public function is_configured(): bool {
+		return $this->get_client_id() && $this->get_client_secret();
+	}
+
+	/**
 	 * Read the configured OIDC client id, or null when none is set.
 	 *
 	 * @return string|null
@@ -335,6 +344,44 @@ class Settings {
 	 */
 	public function allow_signups(): bool {
 		return rest_sanitize_boolean( $this->get_setting_value( 'allow_signups' ) );
+	}
+
+	/**
+	 * Strategy for handling Telegram's missing email claim when creating new users.
+	 *
+	 * @return string Either 'none' or 'placeholder'.
+	 */
+	public function get_email_mode(): string {
+		$value = (string) $this->get_setting_value( 'email_mode' );
+		return in_array( $value, array( 'none', 'placeholder' ), true ) ? $value : 'none';
+	}
+
+	/**
+	 * Site-wide default label for the Sign-in-with-Telegram button.
+	 *
+	 * Falls back to the translatable "Sign in with Telegram" string when
+	 * the option is empty or whitespace-only so callers can always render
+	 * a usable label without their own fallback.
+	 *
+	 * @return string
+	 */
+	public function get_button_label(): string {
+		$value = trim( (string) $this->get_setting_value( 'button_label' ) );
+		return '' === $value
+			? __( 'Sign in with Telegram', 'telegram-auth' )
+			: $value;
+	}
+
+	/**
+	 * Configured post-login redirect, or an empty string when unset.
+	 *
+	 * Same-host enforcement happens at use time via `wp_safe_redirect`
+	 * (the caller in Login_Handler).
+	 *
+	 * @return string
+	 */
+	public function get_post_login_redirect(): string {
+		return (string) $this->get_setting_value( 'post_login_redirect' );
 	}
 
 	/**

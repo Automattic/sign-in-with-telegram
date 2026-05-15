@@ -9,9 +9,11 @@
  * InspectorControls for the two attributes.
  */
 
-import { registerBlockType, type BlockEditProps } from '@wordpress/blocks';
+import apiFetch from '@wordpress/api-fetch';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import { registerBlockType, type BlockEditProps } from '@wordpress/blocks';
 import { PanelBody, TextControl } from '@wordpress/components';
+import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 import metadata from '../block.json';
@@ -20,6 +22,30 @@ interface BlockAttributes {
 	label: string;
 	redirectTo: string;
 	[key: string]: unknown;
+}
+
+interface PluginSettings {
+	button_label?: string;
+	post_login_redirect?: string;
+}
+
+interface SettingsResponse {
+	telegram_auth_settings?: PluginSettings;
+}
+
+/*
+ * Cache the inherited defaults across block instances within the same
+ * editor session. The first Edit mount fetches; subsequent mounts hit
+ * the cached promise.
+ */
+let cachedDefaults: Promise<PluginSettings> | null = null;
+function loadInheritedDefaults(): Promise<PluginSettings> {
+	if (!cachedDefaults) {
+		cachedDefaults = apiFetch<SettingsResponse>({ path: '/wp/v2/settings' })
+			.then((res) => res?.telegram_auth_settings ?? {})
+			.catch(() => ({}));
+	}
+	return cachedDefaults;
 }
 
 const PaperPlaneIcon = () => (
@@ -41,8 +67,25 @@ const Edit = ({
 	setAttributes,
 }: BlockEditProps<BlockAttributes>) => {
 	const blockProps = useBlockProps();
-	const label =
-		attributes.label || __('Sign in with Telegram', 'telegram-auth');
+	const [inherited, setInherited] = useState<PluginSettings>({});
+
+	useEffect(() => {
+		let active = true;
+		loadInheritedDefaults().then((defaults) => {
+			if (active) {
+				setInherited(defaults);
+			}
+		});
+		return () => {
+			active = false;
+		};
+	}, []);
+
+	const inheritedLabel =
+		inherited.button_label?.trim() ||
+		__('Sign in with Telegram', 'telegram-auth');
+	const inheritedRedirect = inherited.post_login_redirect ?? '';
+	const previewLabel = attributes.label || inheritedLabel;
 
 	return (
 		<>
@@ -56,9 +99,10 @@ const Edit = ({
 						__nextHasNoMarginBottom
 						label={__('Button label', 'telegram-auth')}
 						help={__(
-							'Leave blank to use the default copy.',
+							'Leave blank to inherit the site-wide Telegram Auth setting.',
 							'telegram-auth'
 						)}
+						placeholder={inheritedLabel}
 						value={attributes.label}
 						onChange={(next: string) =>
 							setAttributes({ label: next })
@@ -69,9 +113,10 @@ const Edit = ({
 						__nextHasNoMarginBottom
 						label={__('Redirect after sign-in', 'telegram-auth')}
 						help={__(
-							'Optional URL to send the user to after a successful login.',
+							'Optional URL to send the user to after a successful login. Leave blank to inherit the site-wide setting.',
 							'telegram-auth'
 						)}
+						placeholder={inheritedRedirect}
 						value={attributes.redirectTo}
 						onChange={(next: string) =>
 							setAttributes({ redirectTo: next })
@@ -86,7 +131,7 @@ const Edit = ({
 				>
 					<PaperPlaneIcon />{' '}
 					<span className="telegram-auth-login-button__label">
-						{label}
+						{previewLabel}
 					</span>
 				</span>
 			</div>

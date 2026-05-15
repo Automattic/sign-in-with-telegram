@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Telegram_Auth\UI;
 
+use Telegram_Auth\Admin\Settings;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -41,8 +43,12 @@ class Login_Button_Block {
 	 * Build the block registrar.
 	 *
 	 * @param Login_Button $login_button Reused for the render_callback.
+	 * @param Settings     $settings     Source of the site-wide button label / post-login redirect.
 	 */
-	public function __construct( private readonly Login_Button $login_button ) {}
+	public function __construct(
+		private readonly Login_Button $login_button,
+		private readonly Settings $settings,
+	) {}
 
 	/**
 	 * Hook block registration into init + enqueue the editor module on the
@@ -96,12 +102,12 @@ class Login_Button_Block {
 			? trim( sanitize_text_field( (string) $attributes['label'] ) )
 			: '';
 		if ( '' === $label ) {
-			$label = __( 'Sign in with Telegram', 'telegram-auth' );
+			$label = $this->settings->get_button_label();
 		}
 
 		$redirect_to = isset( $attributes['redirectTo'] )
 			? esc_url_raw( (string) $attributes['redirectTo'] )
-			: '';
+			: $this->settings->get_post_login_redirect();
 
 		$button = $this->login_button->render( $label, $redirect_to );
 
