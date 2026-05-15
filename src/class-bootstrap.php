@@ -46,6 +46,34 @@ class Bootstrap {
 	public static function init(): void {
 		// Polyfill the @wordpress/* packages our wp-build-generated pages
 		// expect when running on WP < 7.0 without Gutenberg.
+		// @wordpress/boot's asset.php declares @wordpress/lazy-editor as a
+		// dynamic-import dependency, but neither Core nor the polyfills
+		// package ships it yet. Register an empty stub on the settings
+		// page so WP 6.9.1+'s WP_Script_Modules::register doesn't fire
+		// a "doing it wrong" notice when the polyfills enqueue boot.
+		//
+		// Hooked at wp_default_scripts priority 15 — after Core's
+		// default priority-10 registration, before the polyfills'
+		// own priority-20 registration. WP_Script_Modules::register
+		// is documented as "first wins", so a real lazy-editor
+		// shipped by a future WP/Gutenberg automatically takes
+		// precedence over this stub. Scoped to our page so we don't
+		// shadow other surfaces that actually consume lazy-editor.
+		add_action(
+			'wp_default_scripts',
+			static function (): void {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only URL inspection to scope a no-op script-module stub.
+				$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( (string) $_GET['page'] ) ) : '';
+				if ( self::PAGE_SLUG !== $page ) {
+					return;
+				}
+				if ( function_exists( 'wp_register_script_module' ) ) {
+					wp_register_script_module( '@wordpress/lazy-editor', 'data:text/javascript;charset=utf-8,' );
+				}
+			},
+			15
+		);
+
 		WP_Build_Polyfills::register(
 			'telegram-auth',
 			array(
