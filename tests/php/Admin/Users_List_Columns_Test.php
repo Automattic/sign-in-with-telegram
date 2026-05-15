@@ -42,9 +42,9 @@ final class Users_List_Columns_Test extends TestCase {
 		Functions\expect( 'add_filter' )
 			->once()
 			->with( 'manage_users_sortable_columns', array( $columns, 'add_sortable_phone_column' ) );
-		Functions\expect( 'add_action' )
+		Functions\expect( 'add_filter' )
 			->once()
-			->with( 'pre_get_users', array( $columns, 'maybe_sort_by_phone' ) );
+			->with( 'users_list_table_query_args', array( $columns, 'maybe_sort_by_phone' ) );
 
 		$columns->register();
 
@@ -128,46 +128,17 @@ final class Users_List_Columns_Test extends TestCase {
 	}
 
 	public function test_maybe_sort_by_phone_translates_orderby_to_usermeta_sort(): void {
-		$query = new class() {
-			/**
-			 * Query vars.
-			 *
-			 * @var array<string,mixed>
-			 */
-			private array $vars = array(
+		$args = $this->columns( true )->maybe_sort_by_phone(
+			array(
 				'orderby' => 'billing_phone',
-			);
-
-			/**
-			 * @param string $key Query var key.
-			 *
-			 * @return mixed
-			 */
-			public function get( string $key ): mixed {
-				return $this->vars[ $key ] ?? null;
-			}
-
-			/**
-			 * @param string $key   Query var key.
-			 * @param mixed  $value Query var value.
-			 */
-			public function set( string $key, mixed $value ): void {
-				$this->vars[ $key ] = $value;
-			}
-
-			/**
-			 * @return array<string,mixed>
-			 */
-			public function vars(): array {
-				return $this->vars;
-			}
-		};
-
-		$this->columns( true )->maybe_sort_by_phone( $query );
+				'order'   => 'ASC',
+			)
+		);
 
 		$this->assertSame(
 			array(
 				'orderby'    => 'telegram_auth_billing_phone',
+				'order'      => 'ASC',
 				'meta_query' => array(
 					'relation'                    => 'OR',
 					'telegram_auth_billing_phone' => array(
@@ -180,53 +151,22 @@ final class Users_List_Columns_Test extends TestCase {
 					),
 				),
 			),
-			$query->vars()
+			$args
 		);
 	}
 
 	public function test_maybe_sort_by_phone_leaves_other_orderby_values_unchanged(): void {
-		$query = new class() {
-			/**
-			 * Query vars.
-			 *
-			 * @var array<string,mixed>
-			 */
-			private array $vars = array(
+		$args = $this->columns( true )->maybe_sort_by_phone(
+			array(
 				'orderby' => 'email',
-			);
-
-			/**
-			 * @param string $key Query var key.
-			 *
-			 * @return mixed
-			 */
-			public function get( string $key ): mixed {
-				return $this->vars[ $key ] ?? null;
-			}
-
-			/**
-			 * @param string $key   Query var key.
-			 * @param mixed  $value Query var value.
-			 */
-			public function set( string $key, mixed $value ): void {
-				$this->vars[ $key ] = $value;
-			}
-
-			/**
-			 * @return array<string,mixed>
-			 */
-			public function vars(): array {
-				return $this->vars;
-			}
-		};
-
-		$this->columns( true )->maybe_sort_by_phone( $query );
+			)
+		);
 
 		$this->assertSame(
 			array(
 				'orderby' => 'email',
 			),
-			$query->vars()
+			$args
 		);
 	}
 
