@@ -42,8 +42,12 @@ export function ClientSecretEdit({
 			type={visible ? 'text' : 'password'}
 			value={data.client_secret}
 			disabled={!editable}
-			autoComplete="new-password"
+			autoComplete="off"
 			spellCheck={false}
+			data-1p-ignore="true"
+			data-lpignore="true"
+			data-bwignore="true"
+			data-form-type="other"
 			onChange={(value: string | undefined) =>
 				onChange({ client_secret: value ?? '' })
 			}

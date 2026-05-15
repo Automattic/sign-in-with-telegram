@@ -52,6 +52,11 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 	const [draft, setDraft] = useState<TelegramAuthSettings>(data.settings);
 	const [saving, setSaving] = useState(false);
 	const [snacks, setSnacks] = useState<Snack[]>([]);
+	// Bumps on every successful save. Used as DataForm's `key` so the
+	// form remounts fresh — resets per-field control state like
+	// ClientSecretEdit's `editable` so the secret returns to its
+	// disabled-with-Edit-suffix state once the value has been stored.
+	const [savedTick, setSavedTick] = useState(0);
 
 	const fields = buildFields(data.settingsMeta);
 
@@ -101,6 +106,7 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 			);
 			setOriginal(saved);
 			setDraft(saved);
+			setSavedTick((tick) => tick + 1);
 			pushSnack(__('Settings saved.', 'telegram-auth'));
 		} catch (err: unknown) {
 			pushSnack(
@@ -123,6 +129,7 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 			/>
 
 			<DataForm<TelegramAuthSettings>
+				key={savedTick}
 				data={draft}
 				fields={fields}
 				form={form}
