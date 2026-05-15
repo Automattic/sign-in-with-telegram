@@ -126,6 +126,7 @@ function SettingsAppInner({ data }: { data: TelegramAuthData }): JSX.Element {
 			<Instructions
 				siteOrigin={data.siteOrigin}
 				redirectUri={data.redirectUri}
+				initialOpen={!data.settings.client_id}
 			/>
 
 			<DataForm<TelegramAuthSettings>

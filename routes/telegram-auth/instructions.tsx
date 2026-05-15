@@ -5,33 +5,30 @@
  * to point at.
  */
 
-import {
-	Button,
-	Card,
-	CardBody,
-	CardHeader,
-	ExternalLink,
-} from '@wordpress/components';
+import { Button, ExternalLink, Panel, PanelBody } from '@wordpress/components';
 import { createInterpolateElement, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 interface InstructionsProps {
 	siteOrigin: string;
 	redirectUri: string;
+	initialOpen: boolean;
 }
 
 export function Instructions({
 	siteOrigin,
 	redirectUri,
+	initialOpen,
 }: InstructionsProps): JSX.Element {
 	return (
-		<Card className="telegram-auth-instructions">
-			<CardHeader>
-				<h2 className="telegram-auth-instructions-heading">
-					{__('Connect your Telegram bot', 'telegram-auth')}
-				</h2>
-			</CardHeader>
-			<CardBody>
+		<Panel className="telegram-auth-instructions">
+			<PanelBody
+				title={__(
+					'Instructions (Connect your Telegram bot)',
+					'telegram-auth'
+				)}
+				initialOpen={initialOpen}
+			>
 				<p className="telegram-auth-instructions-intro">
 					{__(
 						'Telegram Auth signs visitors in through your bot using Telegram’s OpenID Connect login. To wire it up, register two URLs with @BotFather and copy back the credentials it gives you.',
@@ -93,8 +90,8 @@ export function Instructions({
 						)}
 					</li>
 				</ol>
-			</CardBody>
-		</Card>
+			</PanelBody>
+		</Panel>
 	);
 }
 
