@@ -1,6 +1,7 @@
 import { __, sprintf } from '@wordpress/i18n';
 import type { Field, Form } from '@wordpress/dataviews';
 
+import { ClientSecretEdit } from './client-secret-edit';
 import type { EmailMode, SettingsMeta, TelegramAuthSettings } from './types';
 import { createInterpolateElement } from '@wordpress/element';
 
@@ -102,10 +103,14 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 							}
 						)
 					: __(
-							'Get it from @BotFather. Read the instructions above.',
+							'Redacted for security. Leave blank to keep the stored value, or click Edit to set a new one.',
 							'telegram-auth'
 						),
 			isDisabled: meta.client_secret_source === 'constant',
+			Edit:
+				meta.client_secret_source === 'constant'
+					? undefined
+					: ClientSecretEdit,
 		},
 		{
 			id: 'allow_signups',
