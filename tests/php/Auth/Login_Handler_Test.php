@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use Telegram_Auth\Admin\Settings;
 use Telegram_Auth\Auth\Consumed_Transaction;
 use Telegram_Auth\Auth\Login_Handler;
+use Telegram_Auth\Auth\Scopes;
 use Telegram_Auth\Auth\Transaction;
 use Telegram_Auth\Auth\Transaction_Exception;
 use Telegram_Auth\Http\Failure_Renderer;
@@ -108,12 +109,13 @@ final class Login_Handler_Test extends TestCase {
 		);
 	}
 
-	private static function consumed( string $intent = 'login', ?int $user_id = null ): Consumed_Transaction {
+	private static function consumed( string $intent = 'login', ?int $user_id = null, array $requested_optional_scopes = array() ): Consumed_Transaction {
 		return new Consumed_Transaction(
-			nonce:         'nonce-fixture',
-			code_verifier: 'verifier-fixture',
-			intent:        $intent,
-			user_id:       $user_id,
+			nonce:                     'nonce-fixture',
+			code_verifier:             'verifier-fixture',
+			intent:                    $intent,
+			user_id:                   $user_id,
+			requested_optional_scopes: $requested_optional_scopes,
 		);
 	}
 
@@ -241,7 +243,7 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( 'wrong_intent', $result->get_error_code() );
 	}
 
-	public function test_unlink_deletes_both_usermeta_keys(): void {
+	public function test_unlink_deletes_telegram_owned_usermeta_keys(): void {
 		$deleted = array();
 		Functions\when( 'delete_user_meta' )->alias(
 			function ( int $user_id, string $key ) use ( &$deleted ) {
@@ -255,20 +257,25 @@ final class Login_Handler_Test extends TestCase {
 
 		$this->make_handler()->unlink( 7 );
 
-		$this->assertSame(
-			array(
+			$this->assertSame(
 				array(
-					'user' => 7,
-					'key'  => 'telegram_auth_sub',
+					array(
+						'user' => 7,
+						'key'  => 'telegram_auth_sub',
+					),
+					array(
+						'user' => 7,
+						'key'  => 'telegram_auth_picture_url',
+					),
+					array(
+						'user' => 7,
+						'key'  => Scopes::USERMETA_GRANTED_SCOPES,
+					),
 				),
-				array(
-					'user' => 7,
-					'key'  => 'telegram_auth_picture_url',
-				),
-			),
-			$deleted
-		);
-	}
+				$deleted
+			);
+			$this->assertNotContains( 'billing_phone', array_column( $deleted, 'key' ) );
+		}
 
 	public function test_resolve_user_rejects_missing_sub(): void {
 		$claims = self::valid_claims();
@@ -346,6 +353,139 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertArrayNotHasKey( 'first_name', $inserted, 'We do not split the name into first/last; Telegram supplies a single display string.' );
 		$this->assertArrayNotHasKey( 'last_name', $inserted );
 		$this->assertSame( 'https://t.me/i/userpic/x.jpg', $captured_picture );
+	}
+
+	public function test_resolve_user_creating_new_user_writes_billing_phone_when_phone_number_claim_present(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'username_exists' )->justReturn( false );
+		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
+		Functions\when( 'wp_insert_user' )->justReturn( 101 );
+
+		$created     = new \WP_User();
+		$created->ID = 101; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+		Functions\when( 'get_user_by' )->justReturn( $created );
+
+		$written = array();
+		Functions\when( 'update_user_meta' )->alias(
+			function ( int $user_id, string $key, $value ) use ( &$written ) {
+				$written[] = array(
+					'user'  => $user_id,
+					'key'   => $key,
+					'value' => $value,
+				);
+				return true;
+			}
+		);
+
+		$claims                 = self::valid_claims();
+		$claims['phone_number'] = '+15551234567';
+
+		$this->make_handler()->resolve_user( $claims, self::consumed() );
+
+		$this->assertContains(
+			array(
+				'user'  => 101,
+				'key'   => 'billing_phone',
+				'value' => '+15551234567',
+			),
+			$written
+		);
+	}
+
+	public function test_resolve_user_creating_new_user_does_not_write_billing_phone_when_phone_number_claim_absent(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'username_exists' )->justReturn( false );
+		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
+		Functions\when( 'wp_insert_user' )->justReturn( 102 );
+
+		$created     = new \WP_User();
+		$created->ID = 102; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+		Functions\when( 'get_user_by' )->justReturn( $created );
+
+		$written_keys = array();
+		Functions\when( 'update_user_meta' )->alias(
+			function ( int $user_id, string $key, $value ) use ( &$written_keys ) {
+				$written_keys[] = $key;
+				return true;
+			}
+		);
+
+		$this->make_handler()->resolve_user( self::valid_claims(), self::consumed() );
+
+		$this->assertNotContains( 'billing_phone', $written_keys );
+	}
+
+	public function test_resolve_user_existing_user_does_not_backfill_billing_phone(): void {
+		$existing     = new \WP_User();
+		$existing->ID = 7; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+
+		Functions\when( 'get_users' )->justReturn( array( $existing ) );
+
+		$written_keys = array();
+		Functions\when( 'update_user_meta' )->alias(
+			function ( int $user_id, string $key, $value ) use ( &$written_keys ) {
+				$written_keys[] = $key;
+				return true;
+			}
+		);
+
+		$claims                 = self::valid_claims();
+		$claims['phone_number'] = '+15551234567';
+
+		$this->make_handler()->resolve_user( $claims, self::consumed() );
+
+		$this->assertNotContains( 'billing_phone', $written_keys );
+	}
+
+	public function test_resolve_user_writes_granted_scopes_usermeta(): void {
+		$existing     = new \WP_User();
+		$existing->ID = 7; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+
+		Functions\when( 'get_users' )->justReturn( array( $existing ) );
+
+		$stored_scopes = null;
+		Functions\when( 'update_user_meta' )->alias(
+			function ( int $user_id, string $key, $value ) use ( &$stored_scopes ) {
+				if ( Scopes::USERMETA_GRANTED_SCOPES === $key ) {
+					$stored_scopes = $value;
+				}
+				return true;
+			}
+		);
+
+		$this->make_handler()->resolve_user(
+			self::valid_claims(),
+			self::consumed(),
+			array( Scopes::SCOPE_PHONE, 'bogus', Scopes::SCOPE_BOT_ACCESS )
+		);
+
+		$this->assertSame( array( Scopes::SCOPE_PHONE, Scopes::SCOPE_BOT_ACCESS ), $stored_scopes );
+	}
+
+	public function test_granted_scopes_record_requested_dm_access_after_successful_callback(): void {
+		$claims                 = self::valid_claims();
+		$claims['phone_number'] = '+15551234567';
+
+		$this->assertSame(
+			array( Scopes::SCOPE_PHONE, Scopes::SCOPE_BOT_ACCESS ),
+			$this->granted_scopes_from_callback(
+				$claims,
+				self::consumed( 'login', null, array( Scopes::SCOPE_PHONE, Scopes::SCOPE_BOT_ACCESS ) )
+			)
+		);
+	}
+
+	/**
+	 * Invoke Login_Handler's callback-scope derivation helper.
+	 *
+	 * @param array<string,mixed> $claims Validated claims.
+	 *
+	 * @return string[]
+	 */
+	private function granted_scopes_from_callback( array $claims, Consumed_Transaction $tx ): array {
+		$method = new \ReflectionMethod( Login_Handler::class, 'granted_scopes_from_callback' );
+		$method->setAccessible( true );
+		return $method->invoke( $this->make_handler(), $claims, $tx );
 	}
 
 	// --- handle() ---

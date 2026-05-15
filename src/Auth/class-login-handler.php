@@ -130,10 +130,11 @@ class Login_Handler {
 			);
 		}
 
-		$validator = new Token_Validator( $client, (string) $discovery['issuer'], $config->client_id );
-		$claims    = $validator->validate( (string) $tokens['id_token'], $tx->nonce );
+		$validator      = new Token_Validator( $client, (string) $discovery['issuer'], $config->client_id );
+		$claims         = $validator->validate( (string) $tokens['id_token'], $tx->nonce );
+		$granted_scopes = $this->granted_scopes_from_callback( $claims, $tx );
 
-		$user = $this->resolve_user( $claims, $tx );
+		$user = $this->resolve_user( $claims, $tx, $granted_scopes );
 		if ( $user instanceof WP_Error ) {
 			$this->failure_renderer->render_code( $this->code_for_user_error( $user ) );
 		}
@@ -189,12 +190,13 @@ class Login_Handler {
 	 *    sessions silently).
 	 *  - No existing mapping → attach to the originating user.
 	 *
-	 * @param array<string,mixed>  $claims Validated id_token claims.
-	 * @param Consumed_Transaction $tx     Decoded transaction (for intent + originating user_id).
+	 * @param array<string,mixed>  $claims         Validated id_token claims.
+	 * @param Consumed_Transaction $tx             Decoded transaction (for intent + originating user_id).
+	 * @param string[]             $granted_scopes Optional scopes granted for this callback.
 	 *
 	 * @return WP_User|WP_Error The user to sign in, or a WP_Error keyed by failure code.
 	 */
-	public function resolve_user( array $claims, Consumed_Transaction $tx ): WP_User|WP_Error {
+	public function resolve_user( array $claims, Consumed_Transaction $tx, array $granted_scopes = array() ): WP_User|WP_Error {
 		$sub = isset( $claims['sub'] ) ? (string) $claims['sub'] : '';
 		if ( '' === $sub ) {
 			return new WP_Error( 'token_invalid', __( 'Token is missing the sub claim.', 'telegram-auth' ) );
@@ -205,12 +207,13 @@ class Login_Handler {
 		// Link flow runs through a stricter path so we never clobber an
 		// existing mapping or silently switch the session to a different user.
 		if ( 'link' === $tx->intent ) {
-			return $this->resolve_link( $existing, $claims, $sub, $tx );
+			return $this->resolve_link( $existing, $claims, $sub, $tx, $granted_scopes );
 		}
 
 		// 1. Already linked? Sign in (and refresh profile fields) as that user.
 		if ( $existing instanceof WP_User ) {
 			$this->update_profile_from_claims( $existing, $claims );
+			$this->update_granted_scopes( $existing->ID, $granted_scopes );
 			return $existing;
 		}
 
@@ -224,6 +227,7 @@ class Login_Handler {
 			if ( $current instanceof WP_User ) {
 				update_user_meta( $current_id, self::USERMETA_SUB, $sub );
 				$this->update_profile_from_claims( $current, $claims );
+				$this->update_granted_scopes( $current_id, $granted_scopes );
 				return $current;
 			}
 		}
@@ -233,20 +237,25 @@ class Login_Handler {
 			return new WP_Error( 'signup_disabled', __( 'Sign-up is disabled on this site.', 'telegram-auth' ) );
 		}
 
-		return $this->create_user_from_claims( $claims );
+		$user = $this->create_user_from_claims( $claims );
+		if ( $user instanceof WP_User ) {
+			$this->update_granted_scopes( $user->ID, $granted_scopes );
+		}
+		return $user;
 	}
 
 	/**
 	 * Drive the `intent === 'link'` branch of resolve_user.
 	 *
-	 * @param WP_User|null         $existing The user currently holding this sub mapping, if any.
-	 * @param array<string,mixed>  $claims   Validated id_token claims.
-	 * @param string               $sub      Telegram subject identifier.
-	 * @param Consumed_Transaction $tx       Decoded transaction (carries the originating user id).
+	 * @param WP_User|null         $existing       The user currently holding this sub mapping, if any.
+	 * @param array<string,mixed>  $claims         Validated id_token claims.
+	 * @param string               $sub            Telegram subject identifier.
+	 * @param Consumed_Transaction $tx             Decoded transaction (carries the originating user id).
+	 * @param string[]             $granted_scopes Optional scopes granted for this callback.
 	 *
 	 * @return WP_User|WP_Error
 	 */
-	private function resolve_link( ?WP_User $existing, array $claims, string $sub, Consumed_Transaction $tx ): WP_User|WP_Error {
+	private function resolve_link( ?WP_User $existing, array $claims, string $sub, Consumed_Transaction $tx, array $granted_scopes ): WP_User|WP_Error {
 		if ( null === $tx->user_id || 0 === $tx->user_id ) {
 			return new WP_Error( 'wrong_intent', __( 'Account linking requires being signed in first.', 'telegram-auth' ) );
 		}
@@ -263,6 +272,7 @@ class Login_Handler {
 		// Idempotent — writing the same sub a second time is a no-op.
 		update_user_meta( $tx->user_id, self::USERMETA_SUB, $sub );
 		$this->update_profile_from_claims( $user, $claims );
+		$this->update_granted_scopes( $tx->user_id, $granted_scopes );
 		return $user;
 	}
 
@@ -277,6 +287,7 @@ class Login_Handler {
 	public function unlink( int $user_id ): void {
 		delete_user_meta( $user_id, self::USERMETA_SUB );
 		delete_user_meta( $user_id, self::USERMETA_PICTURE_URL );
+		delete_user_meta( $user_id, Scopes::USERMETA_GRANTED_SCOPES );
 
 		do_action(
 			'telegram_auth_debug',
@@ -379,6 +390,11 @@ class Login_Handler {
 
 		update_user_meta( (int) $user_id, self::USERMETA_SUB, $sub );
 
+		$phone = $this->sanitize_phone_number_claim( $claims );
+		if ( '' !== $phone ) {
+			update_user_meta( (int) $user_id, 'billing_phone', $phone );
+		}
+
 		if ( ! empty( $claims['picture'] ) && is_string( $claims['picture'] ) ) {
 			$picture = esc_url_raw( $claims['picture'] );
 			if ( '' !== $picture ) {
@@ -415,6 +431,69 @@ class Login_Handler {
 		}
 		// Extreme edge case; just append a few random hex chars.
 		return $base . '_' . bin2hex( \random_bytes( 4 ) );
+	}
+
+	/**
+	 * Derive granted optional scopes from the claims and original request.
+	 *
+	 * @param array<string,mixed>  $claims Validated id_token claims.
+	 * @param Consumed_Transaction $tx     Consumed transaction.
+	 *
+	 * @return string[]
+	 */
+	private function granted_scopes_from_callback( array $claims, Consumed_Transaction $tx ): array {
+		$requested = $this->filter_optional_scopes( $tx->requested_optional_scopes );
+		$granted   = array();
+		if ( in_array( Scopes::SCOPE_PHONE, $requested, true ) && '' !== $this->sanitize_phone_number_claim( $claims ) ) {
+			$granted[] = Scopes::SCOPE_PHONE;
+		}
+		if ( in_array( Scopes::SCOPE_BOT_ACCESS, $requested, true ) ) {
+			$granted[] = Scopes::SCOPE_BOT_ACCESS;
+		}
+
+		return $granted;
+	}
+
+	/**
+	 * Keep only optional scopes the plugin understands.
+	 *
+	 * @param string[] $scopes Raw scopes.
+	 *
+	 * @return string[]
+	 */
+	private function filter_optional_scopes( array $scopes ): array {
+		$allowed = array( Scopes::SCOPE_PHONE, Scopes::SCOPE_BOT_ACCESS );
+		$clean   = array();
+		foreach ( $scopes as $scope ) {
+			if ( is_string( $scope ) && in_array( $scope, $allowed, true ) ) {
+				$clean[] = $scope;
+			}
+		}
+		return array_values( array_unique( $clean ) );
+	}
+
+	/**
+	 * Persist granted optional scopes on a user.
+	 *
+	 * @param int      $user_id User id.
+	 * @param string[] $scopes  Granted optional scopes.
+	 */
+	private function update_granted_scopes( int $user_id, array $scopes ): void {
+		update_user_meta( $user_id, Scopes::USERMETA_GRANTED_SCOPES, $this->filter_optional_scopes( $scopes ) );
+	}
+
+	/**
+	 * Sanitize the Telegram phone number claim.
+	 *
+	 * @param array<string,mixed> $claims Validated id_token claims.
+	 *
+	 * @return string Sanitized phone number, or empty string.
+	 */
+	private function sanitize_phone_number_claim( array $claims ): string {
+		if ( empty( $claims['phone_number'] ) || ! is_string( $claims['phone_number'] ) ) {
+			return '';
+		}
+		return sanitize_text_field( $claims['phone_number'] );
 	}
 
 	/**

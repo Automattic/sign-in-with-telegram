@@ -167,6 +167,15 @@ final class Transaction_Test extends TestCase {
 		$this->assertSame( 'https://example.test/wp-admin/profile.php', $consumed->redirect_to );
 	}
 
+	public function test_consume_round_trips_requested_optional_scopes(): void {
+		$tx      = new Transaction();
+		$started = $tx->start( 'login', null, '', array( 'phone', 'bogus', 'telegram:bot_access', 'phone' ) );
+
+		$consumed = $tx->consume( $started->state );
+
+		$this->assertSame( array( 'phone', 'telegram:bot_access' ), $consumed->requested_optional_scopes );
+	}
+
 	public function test_consume_defaults_redirect_to_to_empty_string(): void {
 		$tx      = new Transaction();
 		$started = $tx->start( 'login' );

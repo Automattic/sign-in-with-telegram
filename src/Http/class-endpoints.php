@@ -126,13 +126,15 @@ class Endpoints {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified by verify_start_nonce above.
 		$redirect_to = isset( $_GET['telegram_auth_redirect_to'] ) ? esc_url_raw( wp_unslash( (string) $_GET['telegram_auth_redirect_to'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
-		$client  = new Client( $config );
-		$started = $this->transaction->start( $intent, $user_id, $redirect_to );
+		$client                    = new Client( $config );
+		$requested_optional_scopes = $this->settings->requested_optional_scopes();
+		$started                   = $this->transaction->start( $intent, $user_id, $redirect_to, $requested_optional_scopes );
 
 		$url = $client->build_authorize_url(
 			state:          $started->state,
 			nonce:          $started->nonce,
 			code_challenge: $started->code_challenge,
+			scopes:         $requested_optional_scopes,
 		);
 
 		do_action( 'telegram_auth_debug', 'authorize_redirect', array( 'intent' => $intent ) );
