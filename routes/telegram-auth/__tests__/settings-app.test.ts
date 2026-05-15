@@ -11,6 +11,7 @@ const baseline: TelegramAuthSettings = {
 	request_dm: false,
 	button_label: 'Sign in with Telegram',
 	post_login_redirect: '',
+	clean_uninstall: false,
 };
 
 describe('diff', () => {

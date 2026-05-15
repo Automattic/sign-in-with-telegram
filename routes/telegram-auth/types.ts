@@ -15,6 +15,7 @@ export interface TelegramAuthSettings {
 	request_dm: boolean;
 	button_label: string;
 	post_login_redirect: string;
+	clean_uninstall: boolean;
 }
 
 export interface SettingsMeta {

@@ -183,6 +183,15 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 				'telegram-auth'
 			),
 		},
+		{
+			id: 'clean_uninstall',
+			label: __('Delete plugin data when uninstalled', 'telegram-auth'),
+			type: 'boolean',
+			description: __(
+				'When this plugin is uninstalled, remove all the settings and user data stored by it.',
+				'telegram-auth'
+			),
+		},
 	];
 }
 
@@ -219,6 +228,12 @@ export const form: Form = {
 			label: __('Sign-in button', 'telegram-auth'),
 			layout: { type: 'card', withHeader: true, isCollapsible: false },
 			children: ['button_label', 'post_login_redirect'],
+		},
+		{
+			id: 'section-uninstall',
+			label: __('Data clean up', 'telegram-auth'),
+			layout: { type: 'card', withHeader: true, isCollapsible: false },
+			children: ['clean_uninstall'],
 		},
 	],
 };
