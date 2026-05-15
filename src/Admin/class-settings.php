@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace Telegram_Auth\Admin;
 
 use Telegram_Auth\OIDC\Config;
+use WP_REST_Request;
+use WP_REST_Response;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -38,13 +40,47 @@ class Settings {
 	 *
 	 * @var string[]
 	 */
-	private const EMAIL_MODES = array( 'none', 'placeholder', 'require' );
+	private const EMAIL_MODES = array( 'none', 'placeholder' );
 
 	/**
 	 * Hook settings registration into WordPress.
 	 */
 	public function register(): void {
 		add_action( 'init', array( self::class, 'register_setting' ) );
+		add_filter( 'rest_request_after_callbacks', array( self::class, 'redact_in_rest_response' ), 10, 3 );
+	}
+
+	/**
+	 * Strip `client_secret` out of the `/wp/v2/settings` REST response.
+	 *
+	 * @param mixed               $response Response value returned by the REST handler.
+	 * @param array<string,mixed> $handler  Handler that produced the response.
+	 * @param \WP_REST_Request    $request  Originating request.
+	 *
+	 * @return mixed
+	 */
+	public static function redact_in_rest_response( $response, $handler, $request ) {
+		unset( $handler );
+		if ( ! $request instanceof WP_REST_Request ) {
+			return $response;
+		}
+		if ( '/wp/v2/settings' !== $request->get_route() ) {
+			return $response;
+		}
+
+		if ( $response instanceof WP_REST_Response ) {
+			$data = $response->get_data();
+			if ( is_array( $data ) && isset( $data[ self::OPTION_KEY ] ) && is_array( $data[ self::OPTION_KEY ] ) ) {
+				$data[ self::OPTION_KEY ] = self::redact_for_display( $data[ self::OPTION_KEY ] );
+				$response->set_data( $data );
+			}
+			return $response;
+		}
+
+		if ( is_array( $response ) && isset( $response[ self::OPTION_KEY ] ) && is_array( $response[ self::OPTION_KEY ] ) ) {
+			$response[ self::OPTION_KEY ] = self::redact_for_display( $response[ self::OPTION_KEY ] );
+		}
+		return $response;
 	}
 
 	/**
@@ -152,10 +188,68 @@ class Settings {
 	 * @return array<string,mixed>
 	 */
 	public static function sanitize( array $input ): array {
-		$defaults = self::defaults();
-		$input    = array_merge( $defaults, $input );
+		$stored = get_option( self::OPTION_KEY, array() );
+		$base   = is_array( $stored ) && ! empty( $stored )
+			? array_merge( self::defaults(), $stored )
+			: self::defaults();
 
-		return rest_sanitize_value_from_schema( $input, self::schema(), self::OPTION_KEY );
+		/*
+		 * "Leave blank to keep" for the secret. The UI redacts it
+		 * to an empty string on every render, so submitting the form
+		 * without typing always carries client_secret = ''. Treat that
+		 * as "no change" rather than "clear the stored secret" —
+		 * clearing has to be done via wp-cli.
+		 */
+		if ( isset( $input['client_secret'] ) && '' === $input['client_secret'] ) {
+			unset( $input['client_secret'] );
+		}
+
+		/*
+		 * Credentials managed by wp-config constants are
+		 * managed-elsewhere — they must never be persisted to the
+		 * options row, regardless of what the form submitted.
+		 */
+		if ( defined( self::CLIENT_ID_CONSTANT ) && constant( self::CLIENT_ID_CONSTANT ) ) {
+			unset( $input['client_id'] );
+		}
+		if ( defined( self::CLIENT_SECRET_CONSTANT ) && constant( self::CLIENT_SECRET_CONSTANT ) ) {
+			unset( $input['client_secret'] );
+		}
+
+		$merged = array_merge( $base, $input );
+
+		return rest_sanitize_value_from_schema( $merged, self::schema(), self::OPTION_KEY );
+	}
+
+	/**
+	 * Return the effective settings for surfacing to the admin UI.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function get_all(): array {
+		$stored   = get_option( self::OPTION_KEY, array() );
+		$settings = is_array( $stored ) && ! empty( $stored )
+			? array_merge( self::defaults(), $stored )
+			: self::defaults();
+
+		$client_id = $this->get_client_id();
+		if ( null !== $client_id ) {
+			$settings['client_id'] = $client_id;
+		}
+
+		return self::redact_for_display( $settings );
+	}
+
+	/**
+	 * Apply the redaction policy used everywhere the settings are surfaced.
+	 *
+	 * @param array<string,mixed> $settings Raw settings array.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function redact_for_display( array $settings ): array {
+		$settings['client_secret'] = '';
+		return $settings;
 	}
 
 	/**
@@ -190,17 +284,38 @@ class Settings {
 	}
 
 	/**
+	 * Identify where the effective client id comes from.
+	 *
+	 * @return 'constant'|'db'|'unset'
+	 */
+	public function get_client_id_source(): string {
+		return $this->source_for( self::CLIENT_ID_CONSTANT, 'client_id' );
+	}
+
+	/**
 	 * Identify where the effective client secret comes from.
 	 *
 	 * @return 'constant'|'db'|'unset'
 	 */
-	public function get_secret_source(): string {
-		$constant = defined( self::CLIENT_SECRET_CONSTANT ) ? constant( self::CLIENT_SECRET_CONSTANT ) : '';
+	public function get_client_secret_source(): string {
+		return $this->source_for( self::CLIENT_SECRET_CONSTANT, 'client_secret' );
+	}
+
+	/**
+	 * Shared resolver for credential-source flags.
+	 *
+	 * @param string $constant_name Name of the wp-config constant that overrides the option.
+	 * @param string $option_key    Property name on the settings option.
+	 *
+	 * @return 'constant'|'db'|'unset'
+	 */
+	private function source_for( string $constant_name, string $option_key ): string {
+		$constant = defined( $constant_name ) ? constant( $constant_name ) : '';
 		if ( $constant ) {
 			return 'constant';
 		}
 
-		$value = $this->get_setting_value( 'client_secret' );
+		$value = $this->get_setting_value( $option_key );
 		return '' === $value ? 'unset' : 'db';
 	}
 

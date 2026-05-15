@@ -26,12 +26,7 @@
 		"format": "prettier --write \"{routes,packages}/**/*.{ts,tsx,js,jsx,scss,json}\"",
 		"test": "jest --passWithNoTests"
 	},
-	"devDependencies": {
-		"@eslint/js": "9.39.4",
-		"@types/jest": "^30.0.0",
-		"@types/react": "^18.3.27",
-		"@types/wordpress__block-editor": "^15.0.6",
-		"@types/wordpress__blocks": "^15.10.2",
+	"dependencies": {
 		"@wordpress/api-fetch": "^7.45.0",
 		"@wordpress/block-editor": "^15.18.0",
 		"@wordpress/blocks": "^15.18.0",
@@ -39,9 +34,18 @@
 		"@wordpress/components": "^33.0.0",
 		"@wordpress/dataviews": "^14.2.0",
 		"@wordpress/element": "^6.45.0",
+		"@wordpress/i18n": "^6.18.0",
+		"@wordpress/icons": "^13.1.0",
+		"react": "^18.3.1"
+	},
+	"devDependencies": {
+		"@eslint/js": "9.39.4",
+		"@types/jest": "^30.0.0",
+		"@types/react": "^18.3.27",
+		"@types/wordpress__block-editor": "^15.0.6",
+		"@types/wordpress__blocks": "^15.10.2",
 		"@wordpress/env": "^11.5.0",
 		"@wordpress/eslint-plugin": "^25.1.0",
-		"@wordpress/i18n": "^6.18.0",
 		"@wordpress/jest-preset-default": "^12.45.0",
 		"@wordpress/prettier-config": "^4.45.0",
 		"@wordpress/stylelint-config": "^23.37.0",
