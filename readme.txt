@@ -12,7 +12,7 @@ Add Telegram login to your WordPress site. Visitors sign in with their existing 
 
 == Description ==
 
-Telegram Auth lets visitors sign in to your WordPress site using their Telegram account, via Telegram's OpenID Connect provider. Unlike older Telegram-login plugins that embed Telegram's JavaScript "Login Widget", this plugin uses a standard server-side OIDC redirect flow — no third-party scripts on your pages, no widget cookies, works in any browser including those with strict privacy and tracker-blocking settings.
+Telegram Auth lets visitors sign in to your WordPress site using their Telegram account, via [Telegram's OpenID Connect provider](https://core.telegram.org/bots/telegram-login). Unlike older Telegram-login plugins that embed Telegram's JavaScript "Login Widget", this plugin uses a standard server-side OIDC redirect flow — no third-party scripts on your pages, no widget cookies, works in any browser including those with strict privacy and tracker-blocking settings.
 
 = Features =
 

@@ -167,6 +167,10 @@ class Settings {
 					'default' => '',
 					'format'  => 'uri',
 				),
+				'clean_uninstall'     => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
 			),
 		);
 	}
@@ -405,6 +409,16 @@ class Settings {
 	 */
 	public function request_dm(): bool {
 		return rest_sanitize_boolean( $this->get_setting_value( 'request_dm' ) );
+	}
+
+	/**
+	 * Whether uninstalling the plugin should remove the saved
+	 * settings and user-data.
+	 *
+	 * @return bool
+	 */
+	public function clean_uninstall(): bool {
+		return rest_sanitize_boolean( $this->get_setting_value( 'clean_uninstall' ) );
 	}
 
 	/**

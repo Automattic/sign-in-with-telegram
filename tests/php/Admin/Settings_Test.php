@@ -171,6 +171,7 @@ final class Settings_Test extends TestCase {
 				'request_dm',
 				'button_label',
 				'post_login_redirect',
+				'clean_uninstall',
 			),
 			array_keys( $defaults )
 		);
@@ -183,6 +184,7 @@ final class Settings_Test extends TestCase {
 		$this->assertFalse( $defaults['request_dm'] );
 		$this->assertSame( 'Sign in with Telegram', $defaults['button_label'] );
 		$this->assertSame( '', $defaults['post_login_redirect'] );
+		$this->assertFalse( $defaults['clean_uninstall'] );
 	}
 
 	public function test_sanitize_coerces_and_bounds_values(): void {
@@ -536,6 +538,24 @@ final class Settings_Test extends TestCase {
 		$this->settings_option        = array( 'client_secret' => 'stored-secret' );
 
 		$this->assertSame( 'constant', $settings->get_client_secret_source() );
+	}
+
+	public function test_clean_uninstall_defaults_to_false(): void {
+		$this->assertFalse( ( new Settings() )->clean_uninstall() );
+	}
+
+	public function test_clean_uninstall_reads_stored_truthy_value(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'clean_uninstall' => '1' );
+
+		$this->assertTrue( ( new Settings() )->clean_uninstall() );
+	}
+
+	public function test_clean_uninstall_reads_stored_falsy_value(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'clean_uninstall' => '0' );
+
+		$this->assertFalse( ( new Settings() )->clean_uninstall() );
 	}
 
 	public function test_register_hooks_the_settings_api_registration(): void {
