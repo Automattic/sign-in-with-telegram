@@ -98,14 +98,23 @@ class Login_Button {
 	}
 
 	/**
-	 * Print a small stylesheet on wp-login.php so the Telegram button gets
-	 * breathing room between the password field and the submit row.
+	 * Enqueue a tiny stylesheet on wp-login.php so the Telegram button
+	 * gets breathing room between the password field and the submit row.
+	 *
+	 * Registers an empty `src = false` handle and attaches the rules via
+	 * `wp_add_inline_style` so WordPress decides where the `<style>`
+	 * actually lands in the document; printing it directly inside an
+	 * enqueue hook can flush headers earlier than intended.
 	 */
 	public function print_login_form_styles(): void {
-		echo '<style id="telegram-auth-login-form-button-styles">'
-			. '#login form p.telegram-auth-login-form-button{margin-top:1em;margin-bottom:1em;}'
+		$handle = 'telegram-auth-login-form';
+		wp_register_style( $handle, false, array(), '0.1.0' );
+		wp_enqueue_style( $handle );
+		wp_add_inline_style(
+			$handle,
+			'#login form p.telegram-auth-login-form-button{margin-top:1em;margin-bottom:1em;}'
 			. '#login form .telegram-auth-login-form-button .telegram-auth-login-button{display:inline-flex;align-items:center;gap:0.25em;}'
-			. '</style>';
+		);
 	}
 
 	/**

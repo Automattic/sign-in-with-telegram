@@ -258,7 +258,7 @@ class Settings {
 	}
 
 	/**
-	 * Whether the plugin has both credentials available (from either the PHP constants or the DB
+	 * Whether the plugin has both credentials available.
 	 *
 	 * @return bool
 	 */

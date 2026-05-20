@@ -317,7 +317,12 @@ final class Login_Handler_Test extends TestCase {
 		$this->make_handler()->resolve_user( self::valid_claims( 'tg-789' ), self::consumed() );
 
 		$this->assertNotNull( $inserted );
-		$this->assertSame( 'tg_tg-789@users.noreply.example.test', $inserted['user_email'] );
+
+		$expected = sprintf(
+			'tg_%s@users.noreply.example.test',
+			substr( hash( 'sha256', 'tg-789' ), 0, 12 )
+		);
+		$this->assertSame( $expected, $inserted['user_email'] );
 	}
 
 	public function test_resolve_user_creates_user_with_empty_email_when_email_mode_is_none(): void {
