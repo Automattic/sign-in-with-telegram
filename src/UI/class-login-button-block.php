@@ -2,20 +2,20 @@
 /**
  * Block-editor block: Telegram Login Button.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\UI;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\Admin\Settings;
+use Automattic\Telegram\SignIn\Settings;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Registers `telegram-auth/login-button` and renders it server-side via the
- * existing Login_Button helper, so the block, the [telegram_auth_button]
+ * Registers `sign-in-with-telegram/login-button` and renders it server-side via the
+ * existing Login_Button helper, so the block, the [telegram_signin_button]
  * shortcode, and the auto-printed login_form button all share identical
  * markup.
  *
@@ -30,14 +30,14 @@ class Login_Button_Block {
 	/**
 	 * Block name registered with WordPress.
 	 */
-	private const BLOCK_NAME = 'telegram-auth/login-button';
+	private const BLOCK_NAME = 'sign-in-with-telegram/login-button';
 
 	/**
 	 * Script module id for the editor-side registration script. Matches the
 	 * id wp-build emits in build/modules/registry.php for our package
 	 * (`@{packageNamespace}/{package-name}` from package.json).
 	 */
-	private const EDITOR_MODULE_ID = '@telegram-auth/login-button-block';
+	private const EDITOR_MODULE_ID = '@sign-in-with-telegram/login-button-block';
 
 	/**
 	 * Build the block registrar.
@@ -84,7 +84,7 @@ class Login_Button_Block {
 		);
 		wp_add_inline_script(
 			'wp-block-editor',
-			'window.telegramAuthBlockDefaults = ' . wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE ) . ';',
+			'window.telegramSigninBlockDefaults = ' . wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE ) . ';',
 			'before'
 		);
 	}

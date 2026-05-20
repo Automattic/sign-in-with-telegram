@@ -1,20 +1,20 @@
 <?php
 /**
- * Routes wp-login.php?action=telegram_auth_* to the right auth handler.
+ * Routes wp-login.php?action=telegram_signin_* to the right auth handler.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Http;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Auth\Transaction;
-use Telegram_Auth\Auth\Transaction_Exception;
-use Telegram_Auth\OIDC\Client;
-use Telegram_Auth\OIDC\OIDC_Exception;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Transaction;
+use Automattic\Telegram\SignIn\Transaction_Exception;
+use Automattic\Telegram\SignIn\Client;
+use Automattic\Telegram\SignIn\OIDC_Exception;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,9 +23,9 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Dispatcher for the three plugin actions on wp-login.php:
- *  - `telegram_auth_start`    — kicks off the login flow (redirects to Telegram).
- *  - `telegram_auth_link`     — kicks off the link flow (logged-in user only).
- *  - `telegram_auth_callback` — Telegram returns here; delegated to Login_Handler.
+ *  - `telegram_signin_start`    — kicks off the login flow (redirects to Telegram).
+ *  - `telegram_signin_link`     — kicks off the link flow (logged-in user only).
+ *  - `telegram_signin_callback` — Telegram returns here; delegated to Login_Handler.
  *
  * We hook `login_init` (not `init`) so we run on wp-login.php specifically
  * and we deliberately avoid `admin-post.php` because many membership/LMS
@@ -36,10 +36,10 @@ class Endpoints {
 	/**
 	 * Action values we handle.
 	 */
-	public const ACTION_START    = 'telegram_auth_start';
-	public const ACTION_CALLBACK = 'telegram_auth_callback';
-	public const ACTION_LINK     = 'telegram_auth_link';
-	public const ACTION_UNLINK   = 'telegram_auth_unlink';
+	public const ACTION_START    = 'telegram_signin_start';
+	public const ACTION_CALLBACK = 'telegram_signin_callback';
+	public const ACTION_LINK     = 'telegram_signin_link';
+	public const ACTION_UNLINK   = 'telegram_signin_unlink';
 
 	/**
 	 * Build the endpoints dispatcher.
@@ -120,11 +120,11 @@ class Endpoints {
 		}
 
 		// Stash the post-login destination requested by the start surface
-		// (shortcode / login_form / block all set `telegram_auth_redirect_to`).
+		// (shortcode / login_form / block all set `telegram_signin_redirect_to`).
 		// Cross-host targets are filtered out by wp_safe_redirect at use time,
 		// so we only need a basic URL scrub here.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified by verify_start_nonce above.
-		$redirect_to = isset( $_GET['telegram_auth_redirect_to'] ) ? esc_url_raw( wp_unslash( (string) $_GET['telegram_auth_redirect_to'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$redirect_to = isset( $_GET['telegram_signin_redirect_to'] ) ? esc_url_raw( wp_unslash( (string) $_GET['telegram_signin_redirect_to'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 		$client                    = new Client( $config );
 		$requested_optional_scopes = $this->settings->requested_optional_scopes();
@@ -137,7 +137,7 @@ class Endpoints {
 			scopes:         $requested_optional_scopes,
 		);
 
-		do_action( 'telegram_auth_debug', 'authorize_redirect', array( 'intent' => $intent ) );
+		do_action( 'telegram_signin_debug', 'authorize_redirect', array( 'intent' => $intent ) );
 
 		// wp_redirect (not wp_safe_redirect) — we deliberately leave-site to
 		// the IdP. wp_safe_redirect rewrites cross-host targets to the
@@ -168,7 +168,7 @@ class Endpoints {
 	/**
 	 * Run the unlink action: clear the stored sub + avatar URL for the
 	 * targeted user, then bounce back to where the request came from with a
-	 * `telegram_auth_unlinked=1` flag the profile UI can show as a notice.
+	 * `telegram_signin_unlinked=1` flag the profile UI can show as a notice.
 	 *
 	 * Targets `?user_id=` when present (admin viewing someone else's
 	 * profile) and falls back to the current user. Authorization is gated
@@ -190,7 +190,7 @@ class Endpoints {
 		$this->login_handler->unlink( $target_id );
 
 		$redirect = add_query_arg(
-			'telegram_auth_unlinked',
+			'telegram_signin_unlinked',
 			'1',
 			$this->resolve_post_unlink_redirect()
 		);

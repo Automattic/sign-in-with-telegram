@@ -56,7 +56,7 @@ jobs:
       - name: Stage production artifact
         run: |
           rm -rf .dist
-          mkdir -p .dist/telegram-auth
+          mkdir -p .dist/sign-in-with-telegram
           # rsync's --exclude-from doesn't recognize comments-with-hash, so
           # strip comment + blank lines from .distignore first.
           grep -vE '^[[:space:]]*(#|$)' .distignore > "$RUNNER_TEMP/dist-excludes"
@@ -64,9 +64,9 @@ jobs:
             --exclude-from="$RUNNER_TEMP/dist-excludes" \
             --exclude='/.dist/' \
             --exclude='/.git/' \
-            ./ .dist/telegram-auth/
+            ./ .dist/sign-in-with-telegram/
 
       - name: Run Plugin Check
         uses: WordPress/plugin-check-action@6f5a57e173c065a394b78688f75df543e4011902  # v1
         with:
-          build-dir: .dist/telegram-auth
+          build-dir: .dist/sign-in-with-telegram

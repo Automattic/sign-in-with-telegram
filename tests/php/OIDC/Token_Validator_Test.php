@@ -1,21 +1,21 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\OIDC\Token_Validator.
+ * Unit tests for Automattic\Telegram\SignIn\Token_Validator.
  *
- * @package Telegram_Auth\Tests\OIDC
+ * @package Automattic\Telegram\SignIn\Tests\OIDC
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\OIDC;
+namespace Automattic\Telegram\SignIn\Tests\OIDC;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\OIDC\Client;
-use Telegram_Auth\OIDC\Config;
-use Telegram_Auth\OIDC\OIDC_Exception;
-use Telegram_Auth\OIDC\Token_Validator;
+use Automattic\Telegram\SignIn\Client;
+use Automattic\Telegram\SignIn\Config;
+use Automattic\Telegram\SignIn\OIDC_Exception;
+use Automattic\Telegram\SignIn\Token_Validator;
 
 require_once __DIR__ . '/Jwt_Test_Fixture.php';
 
@@ -53,7 +53,7 @@ final class Token_Validator_Test extends TestCase {
 		Functions\when( 'wp_remote_retrieve_body' )->alias(
 			static fn( $response ) => $response['body'] ?? ''
 		);
-		// telegram_auth_debug do_action — Brain Monkey would otherwise warn.
+		// telegram_signin_debug do_action — Brain Monkey would otherwise warn.
 		Functions\when( 'do_action' )->justReturn( null );
 	}
 
@@ -102,7 +102,7 @@ final class Token_Validator_Test extends TestCase {
 			new Config(
 				client_id:     self::AUDIENCE,
 				client_secret: 'secret',
-				redirect_uri:  'https://example.test/wp-login.php?action=telegram_auth_callback',
+				redirect_uri:  'https://example.test/wp-login.php?action=telegram_signin_callback',
 				discovery_url: 'https://oauth.example.test/.well-known/openid-configuration',
 			)
 		);

@@ -1,20 +1,20 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Admin\Settings.
+ * Unit tests for Automattic\Telegram\SignIn\Settings.
  *
- * @package Telegram_Auth\Tests\Admin
+ * @package Automattic\Telegram\SignIn\Tests\Admin
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\Admin;
+namespace Automattic\Telegram\SignIn\Tests\Admin;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Admin\Settings;
+use Automattic\Telegram\SignIn\Settings;
 
 /**
  * Brain Monkey-stubbed coverage of the option schema and accessors.
@@ -585,7 +585,7 @@ final class Settings_Test extends TestCase {
 		Functions\expect( 'register_setting' )
 			->once()
 			->with(
-				'telegram_auth',
+				'telegram_signin',
 				Settings::OPTION_KEY,
 				\Mockery::on(
 						static fn( $args ): bool => is_array( $args )

@@ -3,7 +3,7 @@
  * PHPUnit bootstrap. Loads Composer + Brain Monkey so unit tests can stub
  * WP functions without booting WordPress.
  *
- * @package Telegram_Auth\Tests
+ * @package Automattic\Telegram\SignIn\Tests
  */
 
 declare(strict_types=1);

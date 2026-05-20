@@ -2,12 +2,12 @@
 /**
  * OIDC client configuration value object.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\OIDC;
+namespace Automattic\Telegram\SignIn;
 
 defined( 'ABSPATH' ) || exit;
 

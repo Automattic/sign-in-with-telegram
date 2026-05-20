@@ -1,17 +1,17 @@
 <?php
 /**
- * Telegram Auth section on the user-edit / profile screens.
+ * Sign in with Telegram section on the user-edit / profile screens.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\UI;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Http\Endpoints;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Endpoints;
 use WP_User;
 
 defined( 'ABSPATH' ) || exit;
@@ -69,37 +69,37 @@ class Profile_Section {
 
 		$is_self = get_current_user_id() === $user->ID;
 		?>
-		<h2><?php esc_html_e( 'Telegram Auth', 'telegram-auth' ); ?></h2>
+		<h2><?php esc_html_e( 'Sign in with Telegram', 'sign-in-with-telegram' ); ?></h2>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Telegram account', 'telegram-auth' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Telegram account', 'sign-in-with-telegram' ); ?></th>
 				<td>
 					<?php if ( $is_linked ) : ?>
 						<p>
 							<?php
 							printf(
 								/* translators: %s: short identifier for the linked Telegram account. */
-								esc_html__( 'Linked to Telegram account %s.', 'telegram-auth' ),
+								esc_html__( 'Linked to Telegram account %s.', 'sign-in-with-telegram' ),
 								'<code>' . esc_html( self::format_sub( $sub ) ) . '</code>'
 							);
 							?>
 						</p>
 						<p>
 							<a href="<?php echo esc_url( self::unlink_url( $user->ID ) ); ?>" class="button button-secondary">
-								<?php esc_html_e( 'Disconnect Telegram', 'telegram-auth' ); ?>
+								<?php esc_html_e( 'Disconnect Telegram', 'sign-in-with-telegram' ); ?>
 							</a>
 						</p>
 					<?php elseif ( $is_self ) : ?>
-						<p><?php esc_html_e( 'Your account is not connected to Telegram.', 'telegram-auth' ); ?></p>
+						<p><?php esc_html_e( 'Your account is not connected to Telegram.', 'sign-in-with-telegram' ); ?></p>
 						<p>
 							<a href="<?php echo esc_url( self::link_url() ); ?>" class="button button-secondary">
-								<?php esc_html_e( 'Connect Telegram', 'telegram-auth' ); ?>
+								<?php esc_html_e( 'Connect Telegram', 'sign-in-with-telegram' ); ?>
 							</a>
 						</p>
 					<?php else : ?>
-						<p><?php esc_html_e( 'This account is not connected to Telegram.', 'telegram-auth' ); ?></p>
+						<p><?php esc_html_e( 'This account is not connected to Telegram.', 'sign-in-with-telegram' ); ?></p>
 						<p class="description">
-							<?php esc_html_e( 'Only the account owner can connect a Telegram account.', 'telegram-auth' ); ?>
+							<?php esc_html_e( 'Only the account owner can connect a Telegram account.', 'sign-in-with-telegram' ); ?>
 						</p>
 					<?php endif; ?>
 				</td>
@@ -121,8 +121,8 @@ class Profile_Section {
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only success indicators set by our own redirects; no state change.
-		$linked   = ! empty( $_GET['telegram_auth_linked'] );
-		$unlinked = ! empty( $_GET['telegram_auth_unlinked'] );
+		$linked   = ! empty( $_GET['telegram_signin_linked'] );
+		$unlinked = ! empty( $_GET['telegram_signin_unlinked'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		if ( ! $linked && ! $unlinked ) {
@@ -130,8 +130,8 @@ class Profile_Section {
 		}
 
 		$message = $linked
-			? __( 'Telegram account connected.', 'telegram-auth' )
-			: __( 'Telegram account disconnected.', 'telegram-auth' );
+			? __( 'Telegram account connected.', 'sign-in-with-telegram' )
+			: __( 'Telegram account disconnected.', 'sign-in-with-telegram' );
 
 		printf(
 			'<div class="notice notice-success is-dismissible"><p>%s</p></div>',

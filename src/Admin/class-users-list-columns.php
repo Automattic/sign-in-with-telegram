@@ -1,16 +1,16 @@
 <?php
 /**
- * Users list table columns for Telegram Auth usermeta.
+ * Users list table columns for Sign in with Telegram usermeta.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Admin;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Auth\Phone;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Phone;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,7 +27,7 @@ class Users_List_Columns {
 	/**
 	 * Named meta query clause used for sorting.
 	 */
-	private const PHONE_META_CLAUSE = 'telegram_auth_phone_sort';
+	private const PHONE_META_CLAUSE = 'telegram_signin_phone_sort';
 
 	/**
 	 * Runtime settings reader.
@@ -78,13 +78,13 @@ class Users_List_Columns {
 			$with_phone[ $key ] = $label;
 
 			if ( 'email' === $key ) {
-				$with_phone[ self::PHONE_KEY ] = __( 'Phone', 'telegram-auth' );
+				$with_phone[ self::PHONE_KEY ] = __( 'Phone', 'sign-in-with-telegram' );
 				$inserted                      = true;
 			}
 		}
 
 		if ( ! $inserted ) {
-			$with_phone[ self::PHONE_KEY ] = __( 'Phone', 'telegram-auth' );
+			$with_phone[ self::PHONE_KEY ] = __( 'Phone', 'sign-in-with-telegram' );
 		}
 
 		return $with_phone;
@@ -138,12 +138,12 @@ class Users_List_Columns {
 
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Sorting this custom Users list column requires querying usermeta.
 		$args['meta_query'] = array(
-			'relation'               => 'OR',
-			self::PHONE_META_CLAUSE  => array(
+			'relation'                 => 'OR',
+			self::PHONE_META_CLAUSE    => array(
 				'key'     => self::PHONE_KEY,
 				'compare' => 'EXISTS',
 			),
-			'telegram_auth_no_phone' => array(
+			'telegram_signin_no_phone' => array(
 				'key'     => self::PHONE_KEY,
 				'compare' => 'NOT EXISTS',
 			),

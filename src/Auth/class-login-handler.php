@@ -2,18 +2,18 @@
 /**
  * Drives the OIDC callback: token exchange → claim validation → user resolution → wp_set_auth_cookie.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Auth;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\Http\Failure_Renderer;
-use Telegram_Auth\OIDC\Client;
-use Telegram_Auth\OIDC\OIDC_Exception;
-use Telegram_Auth\OIDC\Token_Validator;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Failure_Renderer;
+use Automattic\Telegram\SignIn\Client;
+use Automattic\Telegram\SignIn\OIDC_Exception;
+use Automattic\Telegram\SignIn\Token_Validator;
 use WP_Error;
 use WP_User;
 
@@ -24,7 +24,7 @@ defined( 'ABSPATH' ) || exit;
 // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 
 /**
- * Handles `?action=telegram_auth_callback` requests on `wp-login.php`.
+ * Handles `?action=telegram_signin_callback` requests on `wp-login.php`.
  *
  * Flow:
  *  1. Telegram returns to us with `code` + `state` (or `error` on cancel).
@@ -34,7 +34,7 @@ defined( 'ABSPATH' ) || exit;
  *  3. wp_set_auth_cookie + wp_safe_redirect to the post-login URL.
  *
  * For A4 only the `intent === 'login'` branch is implemented:
- *   - Existing `telegram_auth_sub` mapping → log that user in.
+ *   - Existing `telegram_signin_sub` mapping → log that user in.
  *   - No mapping + signups allowed → wp_insert_user with default role.
  *   - No mapping + signups disabled → fail with `signup_disabled`.
  *
@@ -47,7 +47,7 @@ class Login_Handler {
 	/**
 	 * Usermeta key storing the Telegram OIDC `sub` claim per WP user.
 	 */
-	public const USERMETA_SUB = 'telegram_auth_sub';
+	public const USERMETA_SUB = 'telegram_signin_sub';
 
 	/**
 	 * Usermeta key storing the Telegram-supplied avatar URL.
@@ -55,12 +55,12 @@ class Login_Handler {
 	 * Read by Avatar_Provider's pre_get_avatar_data filter; written here when
 	 * the id_token includes a `picture` claim.
 	 */
-	public const USERMETA_PICTURE_URL = 'telegram_auth_picture_url';
+	public const USERMETA_PICTURE_URL = 'telegram_signin_picture_url';
 
 	/**
 	 * Usermeta key storing the Telegram-verified phone number.
 	 */
-	public const USERMETA_PHONE = 'telegram_auth_phone';
+	public const USERMETA_PHONE = 'telegram_signin_phone';
 
 	/**
 	 * Build the handler.
@@ -76,7 +76,7 @@ class Login_Handler {
 	) {}
 
 	/**
-	 * Entry point invoked by Endpoints when `?action=telegram_auth_callback`.
+	 * Entry point invoked by Endpoints when `?action=telegram_signin_callback`.
 	 *
 	 * @param array<string,mixed> $get The request's `$_GET` (caller passes it raw; we sanitize here).
 	 *
@@ -130,7 +130,7 @@ class Login_Handler {
 		$tokens = $client->exchange_code( $code, $tx->code_verifier );
 		if ( empty( $tokens['id_token'] ) || ! is_string( $tokens['id_token'] ) ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token response is missing id_token.', 'telegram-auth' ),
+				esc_html__( 'Token response is missing id_token.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID
 			);
 		}
@@ -149,7 +149,7 @@ class Login_Handler {
 		// a success flag the UI can render as an admin notice.
 		if ( 'link' === $tx->intent ) {
 			do_action(
-				'telegram_auth_debug',
+				'telegram_signin_debug',
 				'link_succeeded',
 				array(
 					'user_id' => $user->ID,
@@ -157,14 +157,14 @@ class Login_Handler {
 				)
 			);
 
-			wp_safe_redirect( add_query_arg( 'telegram_auth_linked', '1', admin_url( 'profile.php' ) ) );
+			wp_safe_redirect( add_query_arg( 'telegram_signin_linked', '1', admin_url( 'profile.php' ) ) );
 			exit;
 		}
 
 		wp_set_auth_cookie( $user->ID, false );
 
 		do_action(
-			'telegram_auth_debug',
+			'telegram_signin_debug',
 			'login_succeeded',
 			array(
 				'user_id' => $user->ID,
@@ -212,7 +212,7 @@ class Login_Handler {
 	public function resolve_user( array $claims, Consumed_Transaction $tx, array $granted_scopes = array() ): WP_User|WP_Error {
 		$sub = isset( $claims['sub'] ) ? (string) $claims['sub'] : '';
 		if ( '' === $sub ) {
-			return new WP_Error( 'token_invalid', __( 'Token is missing the sub claim.', 'telegram-auth' ) );
+			return new WP_Error( 'token_invalid', __( 'Token is missing the sub claim.', 'sign-in-with-telegram' ) );
 		}
 
 		$existing = $this->find_user_by_sub( $sub );
@@ -247,7 +247,7 @@ class Login_Handler {
 
 		// 3. Sign-up.
 		if ( ! $this->settings->allow_signups() ) {
-			return new WP_Error( 'signup_disabled', __( 'Sign-up is disabled on this site.', 'telegram-auth' ) );
+			return new WP_Error( 'signup_disabled', __( 'Sign-up is disabled on this site.', 'sign-in-with-telegram' ) );
 		}
 
 		$user = $this->create_user_from_claims( $claims );
@@ -270,16 +270,16 @@ class Login_Handler {
 	 */
 	private function resolve_link( ?WP_User $existing, array $claims, string $sub, Consumed_Transaction $tx, array $granted_scopes ): WP_User|WP_Error {
 		if ( null === $tx->user_id || 0 === $tx->user_id ) {
-			return new WP_Error( 'wrong_intent', __( 'Account linking requires being signed in first.', 'telegram-auth' ) );
+			return new WP_Error( 'wrong_intent', __( 'Account linking requires being signed in first.', 'sign-in-with-telegram' ) );
 		}
 
 		if ( $existing instanceof WP_User && $existing->ID !== $tx->user_id ) {
-			return new WP_Error( 'already_linked', __( 'This Telegram account is already linked to a different user on this site.', 'telegram-auth' ) );
+			return new WP_Error( 'already_linked', __( 'This Telegram account is already linked to a different user on this site.', 'sign-in-with-telegram' ) );
 		}
 
 		$user = get_user_by( 'id', $tx->user_id );
 		if ( ! $user instanceof WP_User ) {
-			return new WP_Error( 'token_invalid', __( 'Could not load the user that started the link flow.', 'telegram-auth' ) );
+			return new WP_Error( 'token_invalid', __( 'Could not load the user that started the link flow.', 'sign-in-with-telegram' ) );
 		}
 
 		// Idempotent — writing the same sub a second time is a no-op.
@@ -304,7 +304,7 @@ class Login_Handler {
 		delete_user_meta( $user_id, Scopes::USERMETA_GRANTED_SCOPES );
 
 		do_action(
-			'telegram_auth_debug',
+			'telegram_signin_debug',
 			'unlinked',
 			array( 'user_id' => $user_id )
 		);
@@ -371,7 +371,7 @@ class Login_Handler {
 	}
 
 	/**
-	 * Save the Telegram-verified `phone_number` claim into our own `telegram_auth_phone` usermeta.
+	 * Save the Telegram-verified `phone_number` claim into our own `telegram_signin_phone` usermeta.
 	 *
 	 * @param int                 $user_id Target user id.
 	 * @param array<string,mixed> $claims  Validated id_token claims.
@@ -432,7 +432,7 @@ class Login_Handler {
 		$user = get_user_by( 'id', $user_id );
 		return $user instanceof WP_User
 			? $user
-			: new WP_Error( 'token_invalid', __( 'Could not load freshly-created user.', 'telegram-auth' ) );
+			: new WP_Error( 'token_invalid', __( 'Could not load freshly-created user.', 'sign-in-with-telegram' ) );
 	}
 
 	/**
@@ -585,7 +585,7 @@ class Login_Handler {
 	 */
 	private function log_failure( string $event, \Throwable $error ): void {
 		do_action(
-			'telegram_auth_debug',
+			'telegram_signin_debug',
 			$event,
 			array(
 				'failure_code' => method_exists( $error, 'get_failure_code' ) ? $error->get_failure_code() : null,

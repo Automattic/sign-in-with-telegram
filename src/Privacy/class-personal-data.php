@@ -2,29 +2,29 @@
 /**
  * WordPress Core privacy exporter, eraser, and policy copy.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Privacy;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Auth\Phone;
-use Telegram_Auth\Auth\Scopes;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Phone;
+use Automattic\Telegram\SignIn\Scopes;
 use WP_User;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Registers Telegram Auth data with WordPress' built-in privacy tools.
+ * Registers Sign in with Telegram data with WordPress' built-in privacy tools.
  */
 class Personal_Data {
 
 	/**
 	 * Export/erase group slug.
 	 */
-	private const GROUP_ID = 'telegram-auth';
+	private const GROUP_ID = 'sign-in-with-telegram';
 
 	/**
 	 * Hook the service into Core privacy APIs.
@@ -36,7 +36,7 @@ class Personal_Data {
 	}
 
 	/**
-	 * Register the Telegram Auth personal data exporter.
+	 * Register the Sign in with Telegram personal data exporter.
 	 *
 	 * @param array<string,array<string,mixed>> $exporters Registered exporters.
 	 *
@@ -44,7 +44,7 @@ class Personal_Data {
 	 */
 	public function register_exporter( array $exporters ): array {
 		$exporters[ self::GROUP_ID ] = array(
-			'exporter_friendly_name' => __( 'Telegram Auth', 'telegram-auth' ),
+			'exporter_friendly_name' => __( 'Sign in with Telegram', 'sign-in-with-telegram' ),
 			'callback'               => array( $this, 'export_personal_data' ),
 		);
 
@@ -52,7 +52,7 @@ class Personal_Data {
 	}
 
 	/**
-	 * Register the Telegram Auth personal data eraser.
+	 * Register the Sign in with Telegram personal data eraser.
 	 *
 	 * @param array<string,array<string,mixed>> $erasers Registered erasers.
 	 *
@@ -60,7 +60,7 @@ class Personal_Data {
 	 */
 	public function register_eraser( array $erasers ): array {
 		$erasers[ self::GROUP_ID ] = array(
-			'eraser_friendly_name' => __( 'Telegram Auth', 'telegram-auth' ),
+			'eraser_friendly_name' => __( 'Sign in with Telegram', 'sign-in-with-telegram' ),
 			'callback'             => array( $this, 'erase_personal_data' ),
 		);
 
@@ -68,7 +68,7 @@ class Personal_Data {
 	}
 
 	/**
-	 * Export Telegram Auth data for the user Core resolved by email address.
+	 * Export Sign in with Telegram data for the user Core resolved by email address.
 	 *
 	 * @param string $email_address User email address from Core's export request.
 	 * @param int    $page          Export page number. This exporter is not paginated.
@@ -96,7 +96,7 @@ class Personal_Data {
 		$sub = self::string_meta( $user->ID, Login_Handler::USERMETA_SUB );
 		if ( '' !== $sub ) {
 			$data[] = array(
-				'name'  => __( 'Telegram account identifier', 'telegram-auth' ),
+				'name'  => __( 'Telegram account identifier', 'sign-in-with-telegram' ),
 				'value' => $sub,
 			);
 		}
@@ -104,7 +104,7 @@ class Personal_Data {
 		$phone = Phone::for_user( $user->ID );
 		if ( '' !== $phone ) {
 			$data[] = array(
-				'name'  => __( 'Phone number', 'telegram-auth' ),
+				'name'  => __( 'Phone number', 'sign-in-with-telegram' ),
 				'value' => $phone,
 			);
 		}
@@ -112,7 +112,7 @@ class Personal_Data {
 		$picture_url = self::string_meta( $user->ID, Login_Handler::USERMETA_PICTURE_URL );
 		if ( '' !== $picture_url ) {
 			$data[] = array(
-				'name'  => __( 'Telegram profile photo URL', 'telegram-auth' ),
+				'name'  => __( 'Telegram profile photo URL', 'sign-in-with-telegram' ),
 				'value' => $picture_url,
 			);
 		}
@@ -128,7 +128,7 @@ class Personal_Data {
 			'data' => array(
 				array(
 					'group_id'    => self::GROUP_ID,
-					'group_label' => __( 'Telegram Auth', 'telegram-auth' ),
+					'group_label' => __( 'Sign in with Telegram', 'sign-in-with-telegram' ),
 					'item_id'     => self::GROUP_ID . '-' . $user->ID,
 					'data'        => $data,
 				),
@@ -138,7 +138,7 @@ class Personal_Data {
 	}
 
 	/**
-	 * Erase Telegram Auth data for the user Core resolved by email address.
+	 * Erase Sign in with Telegram data for the user Core resolved by email address.
 	 *
 	 * @param string $email_address User email address from Core's erase request.
 	 * @param int    $page          Erase page number. This eraser is not paginated.
@@ -167,12 +167,12 @@ class Personal_Data {
 	 * Register suggested privacy policy text.
 	 */
 	public function register_policy_content(): void {
-		$content  = '<p>' . esc_html__( 'Telegram Auth lets visitors sign in to this site with their Telegram account using Telegram OpenID Connect.', 'telegram-auth' ) . '</p>';
-		$content .= '<p>' . esc_html__( 'When a user connects Telegram, the plugin stores a stable Telegram account identifier and may store a Telegram profile photo URL when Telegram supplies one. If optional phone access is granted, the plugin may also store the user\'s Telegram phone number.', 'telegram-auth' ) . '</p>';
-		$content .= '<p>' . esc_html__( 'If placeholder email mode is enabled, the plugin may generate a non-routable WordPress account email address from the Telegram account identifier.', 'telegram-auth' ) . '</p>';
-		$content .= '<p>' . esc_html__( 'Phone number access and bot DM access are requested only when those options are enabled in the Telegram Auth settings.', 'telegram-auth' ) . '</p>';
+		$content  = '<p>' . esc_html__( 'Sign in with Telegram lets visitors sign in to this site with their Telegram account using Telegram OpenID Connect.', 'sign-in-with-telegram' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'When a user connects Telegram, the plugin stores a stable Telegram account identifier and may store a Telegram profile photo URL when Telegram supplies one. If optional phone access is granted, the plugin may also store the user\'s Telegram phone number.', 'sign-in-with-telegram' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'If placeholder email mode is enabled, the plugin may generate a non-routable WordPress account email address from the Telegram account identifier.', 'sign-in-with-telegram' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'Phone number access and bot DM access are requested only when those options are enabled in the Sign in with Telegram settings.', 'sign-in-with-telegram' ) . '</p>';
 
-		wp_add_privacy_policy_content( __( 'Telegram Auth', 'telegram-auth' ), $content );
+		wp_add_privacy_policy_content( __( 'Sign in with Telegram', 'sign-in-with-telegram' ), $content );
 	}
 
 	/**

@@ -14,13 +14,13 @@ import { useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { seen, unseen } from '@wordpress/icons';
 
-import type { TelegramAuthSettings } from './types';
+import type { TelegramSigninSettings } from './types';
 
 export function ClientSecretEdit({
 	data,
 	field,
 	onChange,
-}: DataFormControlProps<TelegramAuthSettings>): JSX.Element {
+}: DataFormControlProps<TelegramSigninSettings>): JSX.Element {
 	const [editable, setEditable] = useState(false);
 	const [visible, setVisible] = useState(false);
 	const inputRef = useRef<HTMLInputElement | null>(null);
@@ -60,8 +60,8 @@ export function ClientSecretEdit({
 							onClick={() => setVisible((prev) => !prev)}
 							label={
 								visible
-									? __('Hide secret', 'telegram-auth')
-									: __('Show secret', 'telegram-auth')
+									? __('Hide secret', 'sign-in-with-telegram')
+									: __('Show secret', 'sign-in-with-telegram')
 							}
 							showTooltip
 						/>
@@ -73,7 +73,7 @@ export function ClientSecretEdit({
 							variant="secondary"
 							onClick={enable}
 						>
-							{__('Edit', 'telegram-auth')}
+							{__('Edit', 'sign-in-with-telegram')}
 						</Button>
 					</InputControlSuffixWrapper>
 				)

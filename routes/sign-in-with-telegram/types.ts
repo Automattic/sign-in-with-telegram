@@ -1,11 +1,11 @@
 /**
- * Shared types for the Telegram Auth settings UI.
+ * Shared types for the Sign in with Telegram settings UI.
  */
 
 export type EmailMode = 'none' | 'placeholder';
 export type Source = 'constant' | 'db' | 'unset';
 
-export interface TelegramAuthSettings {
+export interface TelegramSigninSettings {
 	client_id: string;
 	client_secret: string;
 	default_role: string;
@@ -28,7 +28,7 @@ export interface SettingsMeta {
  * setting as a top-level key; we only care about ours.
  */
 export interface WpSettingsResponse {
-	telegram_auth_settings: TelegramAuthSettings;
+	telegram_signin_settings: TelegramSigninSettings;
 }
 
 /**
@@ -36,8 +36,8 @@ export interface WpSettingsResponse {
  * settings UI can render synchronously at mount, without round-tripping
  * the REST API for the initial state.
  */
-export interface TelegramAuthData {
-	settings: TelegramAuthSettings;
+export interface TelegramSigninData {
+	settings: TelegramSigninSettings;
 	settingsMeta: SettingsMeta;
 	siteOrigin: string;
 	redirectUri: string;
@@ -45,6 +45,6 @@ export interface TelegramAuthData {
 
 declare global {
 	interface Window {
-		telegramAuthData?: TelegramAuthData;
+		telegramSigninData?: TelegramSigninData;
 	}
 }

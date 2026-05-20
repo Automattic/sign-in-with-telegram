@@ -2,12 +2,12 @@
 /**
  * Helpers for Telegram optional scopes granted by a user.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Auth;
+namespace Automattic\Telegram\SignIn;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -19,7 +19,7 @@ final class Scopes {
 	/**
 	 * Usermeta key storing the optional scopes granted during the latest callback.
 	 */
-	public const USERMETA_GRANTED_SCOPES = 'telegram_auth_granted_scopes';
+	public const USERMETA_GRANTED_SCOPES = 'telegram_signin_granted_scopes';
 
 	/**
 	 * Telegram phone scope.
@@ -73,6 +73,6 @@ final class Scopes {
 		 * @param int      $user_id User id.
 		 * @param string[] $granted Stored optional scopes.
 		 */
-		return (bool) apply_filters( 'telegram_auth_can_dm', $can_dm, $user_id, $granted );
+		return (bool) apply_filters( 'telegram_signin_can_dm', $can_dm, $user_id, $granted );
 	}
 }

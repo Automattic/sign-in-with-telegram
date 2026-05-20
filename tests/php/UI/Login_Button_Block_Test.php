@@ -1,20 +1,20 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\UI\Login_Button_Block.
+ * Unit tests for Automattic\Telegram\SignIn\Login_Button_Block.
  *
- * @package Telegram_Auth\Tests\UI
+ * @package Automattic\Telegram\SignIn\Tests\UI
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\UI;
+namespace Automattic\Telegram\SignIn\Tests\UI;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\UI\Login_Button;
-use Telegram_Auth\UI\Login_Button_Block;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Login_Button;
+use Automattic\Telegram\SignIn\Login_Button_Block;
 
 /**
  * Coverage for the block render_callback. Editor-side registration runs
@@ -39,10 +39,10 @@ final class Login_Button_Block_Test extends TestCase {
 		Functions\when( 'esc_url_raw' )->returnArg();
 		Functions\when( 'esc_attr' )->returnArg();
 		Functions\when( 'sanitize_text_field' )->returnArg();
-		Functions\when( 'get_block_wrapper_attributes' )->justReturn( 'class="wp-block-telegram-auth-login-button"' );
+		Functions\when( 'get_block_wrapper_attributes' )->justReturn( 'class="wp-block-sign-in-with-telegram-login-button"' );
 		Functions\when( 'get_option' )->alias(
 			static fn( string $key, $default = false ) => match ( $key ) {
-				'telegram_auth_settings' => array(
+				'telegram_signin_settings' => array(
 					'client_id'     => '12345',
 					'client_secret' => 'secret',
 				),
@@ -83,13 +83,13 @@ final class Login_Button_Block_Test extends TestCase {
 	public function test_render_passes_redirect_to_into_the_start_url(): void {
 		$html = $this->block()->render( array( 'redirectTo' => 'https://example.test/welcome/' ) );
 
-		$this->assertStringContainsString( 'telegram_auth_redirect_to', $html );
+		$this->assertStringContainsString( 'telegram_signin_redirect_to', $html );
 	}
 
 	public function test_render_wraps_the_button_in_block_wrapper_attributes(): void {
 		$html = $this->block()->render( array() );
 
-		$this->assertStringContainsString( '<span class="wp-block-telegram-auth-login-button">', $html );
+		$this->assertStringContainsString( '<span class="wp-block-sign-in-with-telegram-login-button">', $html );
 		$this->assertStringContainsString( '</span>', $html );
 		$this->assertStringContainsString( '<a href=', $html );
 	}

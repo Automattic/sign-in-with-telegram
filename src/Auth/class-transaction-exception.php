@@ -2,12 +2,12 @@
 /**
  * Transaction failure exception.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Auth;
+namespace Automattic\Telegram\SignIn;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * The native exception code is an int; we carry a string failure_code
  * separately so callers can map it onto the public-facing
- * `?telegram_auth_error=<code>` query param without exposing exception
+ * `?telegram_signin_error=<code>` query param without exposing exception
  * messages verbatim.
  */
 class Transaction_Exception extends \RuntimeException {
@@ -61,7 +61,7 @@ class Transaction_Exception extends \RuntimeException {
 	}
 
 	/**
-	 * Stable failure code suitable for the public ?telegram_auth_error= param.
+	 * Stable failure code suitable for the public ?telegram_signin_error= param.
 	 *
 	 * @return string One of state_invalid, state_expired.
 	 */
