@@ -273,6 +273,10 @@ class Login_Handler {
 			return new WP_Error( 'wrong_intent', __( 'Account linking requires being signed in first.', 'sign-in-with-telegram' ) );
 		}
 
+		if ( get_current_user_id() !== $tx->user_id ) {
+			return new WP_Error( 'wrong_intent', __( 'Account linking requires the same signed-in user that started the flow.', 'sign-in-with-telegram' ) );
+		}
+
 		if ( $existing instanceof WP_User && $existing->ID !== $tx->user_id ) {
 			return new WP_Error( 'already_linked', __( 'This Telegram account is already linked to a different user on this site.', 'sign-in-with-telegram' ) );
 		}

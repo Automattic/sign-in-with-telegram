@@ -121,6 +121,10 @@ class Bootstrap {
 		$profile_section->register();
 		$personal_data->register();
 
+		add_filter(
+			'plugin_action_links_' . plugin_basename( dirname( __DIR__ ) . '/sign-in-with-telegram.php' ),
+			array( self::class, 'add_settings_action_link' )
+		);
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 
 		add_action(
@@ -144,6 +148,24 @@ class Bootstrap {
 				);
 			}
 		);
+	}
+
+	/**
+	 * Add a Settings link to the plugin row on wp-admin/plugins.php.
+	 *
+	 * @param string[] $links Existing plugin action links.
+	 *
+	 * @return string[]
+	 */
+	public static function add_settings_action_link( array $links ): array {
+		$settings_url  = add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'options-general.php' ) );
+		$settings_link = sprintf(
+			'<a href="%1$s">%2$s</a>',
+			esc_url( $settings_url ),
+			esc_html__( 'Settings', 'sign-in-with-telegram' )
+		);
+
+		return array_merge( array( 'settings' => $settings_link ), $links );
 	}
 
 	/**

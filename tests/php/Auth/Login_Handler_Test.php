@@ -189,6 +189,7 @@ final class Login_Handler_Test extends TestCase {
 		$linker->ID = 9; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
 
 		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'get_current_user_id' )->justReturn( 9 );
 		Functions\when( 'get_user_by' )->justReturn( $linker );
 
 		$captured_user = null;
@@ -215,6 +216,7 @@ final class Login_Handler_Test extends TestCase {
 		$linker->ID = 9; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
 
 		Functions\when( 'get_users' )->justReturn( array( $linker ) );
+		Functions\when( 'get_current_user_id' )->justReturn( 9 );
 		Functions\when( 'get_user_by' )->justReturn( $linker );
 
 		$result = $this->make_handler()->resolve_user( self::valid_claims(), self::consumed( 'link', 9 ) );
@@ -227,11 +229,33 @@ final class Login_Handler_Test extends TestCase {
 		$other->ID = 42; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
 
 		Functions\when( 'get_users' )->justReturn( array( $other ) );
+		Functions\when( 'get_current_user_id' )->justReturn( 9 );
 
 		$result = $this->make_handler()->resolve_user( self::valid_claims(), self::consumed( 'link', 9 ) );
 
 		$this->assertInstanceOf( \WP_Error::class, $result );
 		$this->assertSame( 'already_linked', $result->get_error_code() );
+	}
+
+	public function test_resolve_user_link_refuses_when_current_session_differs_from_originating_user(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'get_current_user_id' )->justReturn( 11 );
+
+		$captured_sub_write = false;
+		Functions\when( 'update_user_meta' )->alias(
+			function ( int $user_id, string $key ) use ( &$captured_sub_write ) {
+				if ( 'telegram_auth_sub' === $key ) {
+					$captured_sub_write = true;
+				}
+				return true;
+			}
+		);
+
+		$result = $this->make_handler()->resolve_user( self::valid_claims(), self::consumed( 'link', 9 ) );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'wrong_intent', $result->get_error_code() );
+		$this->assertFalse( $captured_sub_write, 'A link callback must not update another user when the active session changed.' );
 	}
 
 	public function test_resolve_user_link_yields_wrong_intent_when_user_id_is_missing(): void {
