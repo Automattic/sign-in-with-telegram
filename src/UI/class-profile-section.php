@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Telegram_Auth\UI;
 
+use Telegram_Auth\Admin\Settings;
 use Telegram_Auth\Auth\Login_Handler;
 use Telegram_Auth\Http\Endpoints;
 use WP_User;
@@ -27,6 +28,14 @@ defined( 'ABSPATH' ) || exit;
 class Profile_Section {
 
 	/**
+	 * Build the section renderer.
+	 *
+	 * @param Settings $settings Drives the "is the plugin configured?" gate
+	 *                           around the Connect button.
+	 */
+	public function __construct( private readonly Settings $settings ) {}
+
+	/**
 	 * Hook into the profile screens + admin notices.
 	 */
 	public function register(): void {
@@ -38,17 +47,34 @@ class Profile_Section {
 	/**
 	 * Print the section.
 	 *
+	 * Already-linked users always see their status + a disconnect button
+	 * — disconnecting works regardless of whether the plugin can still
+	 * complete a fresh OIDC handshake. The Connect Telegram button only
+	 * renders when the plugin is configured, since there's nowhere to
+	 * redirect to without credentials.
+	 *
 	 * @param WP_User $user Profile owner.
 	 */
 	public function render( WP_User $user ): void {
-		$sub = (string) get_user_meta( $user->ID, Login_Handler::USERMETA_SUB, true );
+		$sub       = (string) get_user_meta( $user->ID, Login_Handler::USERMETA_SUB, true );
+		$is_linked = '' !== $sub;
+
+		// Skip the whole section when the plugin isn't configured AND the
+		// user isn't already linked — there's nothing to do or surface.
+		// Linked users still see the section so disconnect stays reachable
+		// after credentials get rotated out.
+		if ( ! $is_linked && ! $this->settings->is_configured() ) {
+			return;
+		}
+
+		$is_self = get_current_user_id() === $user->ID;
 		?>
 		<h2><?php esc_html_e( 'Telegram Auth', 'telegram-auth' ); ?></h2>
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Telegram account', 'telegram-auth' ); ?></th>
 				<td>
-					<?php if ( '' !== $sub ) : ?>
+					<?php if ( $is_linked ) : ?>
 						<p>
 							<?php
 							printf(
@@ -63,10 +89,10 @@ class Profile_Section {
 								<?php esc_html_e( 'Disconnect Telegram', 'telegram-auth' ); ?>
 							</a>
 						</p>
-					<?php elseif ( get_current_user_id() === $user->ID ) : ?>
+					<?php elseif ( $is_self ) : ?>
 						<p><?php esc_html_e( 'Your account is not connected to Telegram.', 'telegram-auth' ); ?></p>
 						<p>
-							<a href="<?php echo esc_url( self::link_url() ); ?>" class="button button-primary">
+							<a href="<?php echo esc_url( self::link_url() ); ?>" class="button button-secondary">
 								<?php esc_html_e( 'Connect Telegram', 'telegram-auth' ); ?>
 							</a>
 						</p>

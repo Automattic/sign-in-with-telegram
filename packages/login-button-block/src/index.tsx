@@ -7,10 +7,15 @@
  * [telegram_auth_button] shortcode, and the wp-login.php auto-print share
  * identical HTML. Editor-side we only render a static placeholder + the
  * InspectorControls for the two attributes.
+ *
+ * Inherited defaults for the inspector inputs come from a
+ * `window.telegramAuthBlockDefaults` global that PHP injects via the
+ * `enqueue_block_editor_assets` hook — no REST round-trip, no
+ * permission gotchas for non-admin editors.
  */
 
-import { registerBlockType, type BlockEditProps } from '@wordpress/blocks';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import { registerBlockType, type BlockEditProps } from '@wordpress/blocks';
 import { PanelBody, TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
@@ -20,6 +25,21 @@ interface BlockAttributes {
 	label: string;
 	redirectTo: string;
 	[key: string]: unknown;
+}
+
+interface BlockDefaults {
+	buttonLabel?: string;
+	postLoginRedirect?: string;
+}
+
+declare global {
+	interface Window {
+		telegramAuthBlockDefaults?: BlockDefaults;
+	}
+}
+
+function inheritedDefaults(): BlockDefaults {
+	return window.telegramAuthBlockDefaults ?? {};
 }
 
 const PaperPlaneIcon = () => (
@@ -41,8 +61,13 @@ const Edit = ({
 	setAttributes,
 }: BlockEditProps<BlockAttributes>) => {
 	const blockProps = useBlockProps();
-	const label =
-		attributes.label || __('Sign in with Telegram', 'telegram-auth');
+	const inherited = inheritedDefaults();
+
+	const inheritedLabel =
+		inherited.buttonLabel?.trim() ||
+		__('Sign in with Telegram', 'telegram-auth');
+	const inheritedRedirect = inherited.postLoginRedirect ?? '';
+	const previewLabel = attributes.label || inheritedLabel;
 
 	return (
 		<>
@@ -56,9 +81,10 @@ const Edit = ({
 						__nextHasNoMarginBottom
 						label={__('Button label', 'telegram-auth')}
 						help={__(
-							'Leave blank to use the default copy.',
+							'Leave blank to inherit the site-wide Telegram Auth setting.',
 							'telegram-auth'
 						)}
+						placeholder={inheritedLabel}
 						value={attributes.label}
 						onChange={(next: string) =>
 							setAttributes({ label: next })
@@ -69,9 +95,10 @@ const Edit = ({
 						__nextHasNoMarginBottom
 						label={__('Redirect after sign-in', 'telegram-auth')}
 						help={__(
-							'Optional URL to send the user to after a successful login.',
+							'Optional URL to send the user to after a successful login. Leave blank to inherit the site-wide setting.',
 							'telegram-auth'
 						)}
+						placeholder={inheritedRedirect}
 						value={attributes.redirectTo}
 						onChange={(next: string) =>
 							setAttributes({ redirectTo: next })
@@ -86,7 +113,7 @@ const Edit = ({
 				>
 					<PaperPlaneIcon />{' '}
 					<span className="telegram-auth-login-button__label">
-						{label}
+						{previewLabel}
 					</span>
 				</span>
 			</div>

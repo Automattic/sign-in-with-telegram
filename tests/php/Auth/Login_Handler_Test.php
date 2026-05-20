@@ -287,6 +287,73 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( 'token_invalid', $result->get_error_code() );
 	}
 
+	public function test_resolve_user_creates_user_with_placeholder_email_when_email_mode_is_placeholder(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'username_exists' )->justReturn( false );
+		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
+		Functions\when( 'home_url' )->justReturn( 'https://example.test' );
+		Functions\when( 'wp_parse_url' )->alias(
+			static fn( string $url, int $component = -1 ) => parse_url( $url, $component )
+		);
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_auth_settings' => array( 'email_mode' => 'placeholder' ),
+				'default_role'           => 'subscriber',
+				default                  => $default,
+			}
+		);
+
+		$inserted = null;
+		Functions\when( 'wp_insert_user' )->alias(
+			function ( array $args ) use ( &$inserted ) {
+				$inserted = $args;
+				return 99;
+			}
+		);
+		$created     = new \WP_User();
+		$created->ID = 99; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+		Functions\when( 'get_user_by' )->justReturn( $created );
+
+		$this->make_handler()->resolve_user( self::valid_claims( 'tg-789' ), self::consumed() );
+
+		$this->assertNotNull( $inserted );
+
+		$expected = sprintf(
+			'tg_%s@users.noreply.example.test',
+			substr( hash( 'sha256', 'tg-789' ), 0, 12 )
+		);
+		$this->assertSame( $expected, $inserted['user_email'] );
+	}
+
+	public function test_resolve_user_creates_user_with_empty_email_when_email_mode_is_none(): void {
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'username_exists' )->justReturn( false );
+		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_auth_settings' => array( 'email_mode' => 'none' ),
+				'default_role'           => 'subscriber',
+				default                  => $default,
+			}
+		);
+
+		$inserted = null;
+		Functions\when( 'wp_insert_user' )->alias(
+			function ( array $args ) use ( &$inserted ) {
+				$inserted = $args;
+				return 100;
+			}
+		);
+		$created     = new \WP_User();
+		$created->ID = 100; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+		Functions\when( 'get_user_by' )->justReturn( $created );
+
+		$this->make_handler()->resolve_user( self::valid_claims(), self::consumed() );
+
+		$this->assertNotNull( $inserted );
+		$this->assertSame( '', $inserted['user_email'] );
+	}
+
 	public function test_resolve_user_attaches_new_sub_to_currently_logged_in_user_instead_of_creating_one(): void {
 		$current     = new \WP_User();
 		$current->ID = 7; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
@@ -365,15 +432,16 @@ final class Login_Handler_Test extends TestCase {
 		$created->ID = 101; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
 		Functions\when( 'get_user_by' )->justReturn( $created );
 
-		$written = array();
-		Functions\when( 'update_user_meta' )->alias(
-			function ( int $user_id, string $key, $value ) use ( &$written ) {
-				$written[] = array(
-					'user'  => $user_id,
-					'key'   => $key,
-					'value' => $value,
+		$added = array();
+		Functions\when( 'add_user_meta' )->alias(
+			function ( int $user_id, string $key, $value, bool $unique = false ) use ( &$added ) {
+				$added[] = array(
+					'user_id' => $user_id,
+					'key'     => $key,
+					'value'   => $value,
+					'unique'  => $unique,
 				);
-				return true;
+				return 1;
 			}
 		);
 
@@ -382,13 +450,17 @@ final class Login_Handler_Test extends TestCase {
 
 		$this->make_handler()->resolve_user( $claims, self::consumed() );
 
+		// `$unique = true` is what makes add_user_meta refuse to overwrite
+		// an existing billing_phone — that's what we're asserting here, not
+		// just the value being written.
 		$this->assertContains(
 			array(
-				'user'  => 101,
-				'key'   => 'billing_phone',
-				'value' => '+15551234567',
+				'user_id' => 101,
+				'key'     => 'billing_phone',
+				'value'   => '+15551234567',
+				'unique'  => true,
 			),
-			$written
+			$added
 		);
 	}
 
@@ -415,17 +487,22 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertNotContains( 'billing_phone', $written_keys );
 	}
 
-	public function test_resolve_user_existing_user_does_not_backfill_billing_phone(): void {
+	public function test_resolve_user_existing_user_backfills_billing_phone_with_unique_flag(): void {
 		$existing     = new \WP_User();
 		$existing->ID = 7; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
 
 		Functions\when( 'get_users' )->justReturn( array( $existing ) );
 
-		$written_keys = array();
-		Functions\when( 'update_user_meta' )->alias(
-			function ( int $user_id, string $key, $value ) use ( &$written_keys ) {
-				$written_keys[] = $key;
-				return true;
+		$added = array();
+		Functions\when( 'add_user_meta' )->alias(
+			function ( int $user_id, string $key, $value, bool $unique = false ) use ( &$added ) {
+				$added[] = array(
+					'user_id' => $user_id,
+					'key'     => $key,
+					'value'   => $value,
+					'unique'  => $unique,
+				);
+				return 1;
 			}
 		);
 
@@ -434,7 +511,19 @@ final class Login_Handler_Test extends TestCase {
 
 		$this->make_handler()->resolve_user( $claims, self::consumed() );
 
-		$this->assertNotContains( 'billing_phone', $written_keys );
+		// We always *attempt* the write so first-time-after-link gets a
+		// billing_phone populated. `$unique = true` is what makes WP
+		// refuse the write when the user already has a value (set by
+		// WooCommerce, BuddyPress, themes, or the user themselves).
+		$this->assertContains(
+			array(
+				'user_id' => 7,
+				'key'     => 'billing_phone',
+				'value'   => '+15551234567',
+				'unique'  => true,
+			),
+			$added
+		);
 	}
 
 	public function test_resolve_user_writes_granted_scopes_usermeta(): void {

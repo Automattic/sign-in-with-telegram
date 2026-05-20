@@ -228,6 +228,64 @@ final class Settings_Test extends TestCase {
 		$this->assertSame( '', $sanitized['post_login_redirect'] );
 	}
 
+	public function test_get_button_label_falls_back_to_default_when_unset(): void {
+		$settings = new Settings();
+
+		$this->assertSame( 'Sign in with Telegram', $settings->get_button_label() );
+	}
+
+	public function test_get_button_label_returns_stored_value(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'button_label' => 'Continue with Telegram' );
+
+		$this->assertSame( 'Continue with Telegram', $settings->get_button_label() );
+	}
+
+	public function test_get_button_label_falls_back_to_default_when_whitespace_only(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'button_label' => '   ' );
+
+		$this->assertSame( 'Sign in with Telegram', $settings->get_button_label() );
+	}
+
+	public function test_get_email_mode_defaults_to_none(): void {
+		$settings = new Settings();
+
+		$this->assertSame( 'none', $settings->get_email_mode() );
+	}
+
+	public function test_get_email_mode_accepts_placeholder(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'email_mode' => 'placeholder' );
+
+		$this->assertSame( 'placeholder', $settings->get_email_mode() );
+	}
+
+	public function test_get_email_mode_falls_back_to_none_on_bogus_value(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'email_mode' => 'nope' );
+
+		$this->assertSame( 'none', $settings->get_email_mode() );
+	}
+
+	public function test_get_post_login_redirect_returns_empty_by_default(): void {
+		$settings = new Settings();
+
+		$this->assertSame( '', $settings->get_post_login_redirect() );
+	}
+
+	public function test_get_post_login_redirect_returns_stored_value(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'post_login_redirect' => 'https://example.test/welcome' );
+
+		$this->assertSame( 'https://example.test/welcome', $settings->get_post_login_redirect() );
+	}
+
 	public function test_scope_accessors_read_sanitized_settings(): void {
 		$settings                     = new Settings();
 		$this->settings_option_exists = true;
