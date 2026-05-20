@@ -117,14 +117,6 @@ class Personal_Data {
 			);
 		}
 
-		$granted_scopes = self::granted_scopes_meta( $user->ID );
-		if ( '' !== $granted_scopes ) {
-			$data[] = array(
-				'name'  => __( 'Granted Telegram scopes', 'telegram-auth' ),
-				'value' => $granted_scopes,
-			);
-		}
-
 		if ( empty( $data ) ) {
 			return array(
 				'data' => array(),
@@ -176,7 +168,7 @@ class Personal_Data {
 	 */
 	public function register_policy_content(): void {
 		$content  = '<p>' . esc_html__( 'Telegram Auth lets visitors sign in to this site with their Telegram account using Telegram OpenID Connect.', 'telegram-auth' ) . '</p>';
-		$content .= '<p>' . esc_html__( 'When a user connects Telegram, the plugin stores a stable Telegram account identifier and may store a Telegram profile photo URL when Telegram supplies one. If optional access is granted, the plugin may also store the user\'s Telegram phone number and the Telegram scopes granted during sign-in.', 'telegram-auth' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'When a user connects Telegram, the plugin stores a stable Telegram account identifier and may store a Telegram profile photo URL when Telegram supplies one. If optional phone access is granted, the plugin may also store the user\'s Telegram phone number.', 'telegram-auth' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'If placeholder email mode is enabled, the plugin may generate a non-routable WordPress account email address from the Telegram account identifier.', 'telegram-auth' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'Phone number access and bot DM access are requested only when those options are enabled in the Telegram Auth settings.', 'telegram-auth' ) . '</p>';
 
@@ -211,37 +203,6 @@ class Personal_Data {
 		}
 
 		return trim( (string) $value );
-	}
-
-	/**
-	 * Read the granted scopes usermeta as a readable comma-separated list.
-	 *
-	 * @param int $user_id User id.
-	 *
-	 * @return string
-	 */
-	private static function granted_scopes_meta( int $user_id ): string {
-		$value = get_user_meta( $user_id, Scopes::USERMETA_GRANTED_SCOPES, true );
-		if ( is_scalar( $value ) ) {
-			return trim( (string) $value );
-		}
-		if ( ! is_array( $value ) ) {
-			return '';
-		}
-
-		$scopes = array();
-		foreach ( $value as $scope ) {
-			if ( ! is_scalar( $scope ) ) {
-				continue;
-			}
-
-			$scope = trim( (string) $scope );
-			if ( '' !== $scope ) {
-				$scopes[] = $scope;
-			}
-		}
-
-		return implode( ', ', array_values( array_unique( $scopes ) ) );
 	}
 
 	/**

@@ -106,7 +106,6 @@ final class Personal_Data_Test extends TestCase {
 			Login_Handler::USERMETA_SUB         => 'telegram-sub-123',
 			Login_Handler::USERMETA_PICTURE_URL => 'https://t.me/i/userpic/photo.jpg',
 			Login_Handler::USERMETA_PHONE       => '+15551234567',
-			Scopes::USERMETA_GRANTED_SCOPES     => array( 'phone', 'telegram:bot_access' ),
 		);
 
 		$response = ( new Personal_Data() )->export_personal_data( self::USER_EMAIL );
@@ -123,14 +122,13 @@ final class Personal_Data_Test extends TestCase {
 		$this->assertSame( 'telegram-sub-123', $items['Telegram account identifier'] );
 		$this->assertSame( '+15551234567', $items['Phone number'] );
 		$this->assertSame( 'https://t.me/i/userpic/photo.jpg', $items['Telegram profile photo URL'] );
-		$this->assertSame( 'phone, telegram:bot_access', $items['Granted Telegram scopes'] );
+		$this->assertArrayNotHasKey( 'Granted Telegram scopes', $items );
 	}
 
 	public function test_exporter_omits_empty_values_cleanly(): void {
 		$this->meta = array(
-			Login_Handler::USERMETA_SUB      => 'telegram-sub-123',
-			Login_Handler::USERMETA_PHONE    => '',
-			Scopes::USERMETA_GRANTED_SCOPES  => array(),
+			Login_Handler::USERMETA_SUB   => 'telegram-sub-123',
+			Login_Handler::USERMETA_PHONE => '',
 		);
 
 		$response = ( new Personal_Data() )->export_personal_data( self::USER_EMAIL );
