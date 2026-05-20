@@ -13,6 +13,7 @@ namespace Telegram_Auth;
 
 use Automattic\Jetpack\WP_Build_Polyfills\WP_Build_Polyfills;
 use Telegram_Auth\Admin\Settings;
+use Telegram_Auth\Admin\Users_List_Columns;
 use Telegram_Auth\Auth\Login_Handler;
 use Telegram_Auth\Auth\Transaction;
 use Telegram_Auth\Http\Endpoints;
@@ -80,6 +81,7 @@ class Bootstrap {
 		$avatar_provider    = new Avatar_Provider();
 		$profile_section    = new Profile_Section();
 		$personal_data      = new Personal_Data();
+		$users_list_columns = new Users_List_Columns( $settings );
 
 		$settings->register();
 		$endpoints->register();
@@ -89,8 +91,31 @@ class Bootstrap {
 		$avatar_provider->register();
 		$profile_section->register();
 		$personal_data->register();
+		$users_list_columns->register();
 
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
+
+		add_action(
+			'admin_print_scripts-settings_page_' . self::PAGE_SLUG,
+			static function () use ( $settings ): void {
+				$site_origin  = self::site_origin();
+				$redirect_uri = add_query_arg( 'action', 'telegram_auth_callback', wp_login_url() );
+
+				$data = array(
+					'settings'     => $settings->get_all(),
+					'settingsMeta' => array(
+						'client_id_source'     => $settings->get_client_id_source(),
+						'client_secret_source' => $settings->get_client_secret_source(),
+					),
+					'siteOrigin'   => $site_origin,
+					'redirectUri'  => $redirect_uri,
+				);
+				printf(
+					'<script>window.telegramAuthData = %s;</script>',
+					wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode escapes appropriately for a script context.
+				);
+			}
+		);
 	}
 
 	/**
@@ -115,5 +140,27 @@ class Bootstrap {
 			self::PAGE_SLUG,
 			$render_callback
 		);
+	}
+
+	/**
+	 * Build the canonical site origin (scheme://host[:port]) from home_url().
+	 *
+	 * Telegram matches Trusted Origins exactly, so a non-default port — e.g.
+	 * the `:8888` on the local wp-env stack — has to be preserved.
+	 *
+	 * @return string
+	 */
+	private static function site_origin(): string {
+		$parts = wp_parse_url( home_url() );
+		if ( ! is_array( $parts ) || empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return '';
+		}
+
+		$origin = $parts['scheme'] . '://' . $parts['host'];
+		if ( ! empty( $parts['port'] ) ) {
+			$origin .= ':' . $parts['port'];
+		}
+
+		return $origin;
 	}
 }

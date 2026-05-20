@@ -1,0 +1,88 @@
+.telegram-auth-settings {
+	padding-block: 1.5rem 4rem;
+	padding-inline: 1.75rem;
+
+	.telegram-auth-settings-container {
+		max-width: 880px;
+	}
+
+	.telegram-auth-settings-title {
+		margin-bottom: 0.25rem;
+	}
+
+	.telegram-auth-settings-subtitle {
+		margin-top: 0;
+		margin-bottom: 1.5rem;
+		color: #646970;
+	}
+
+	.telegram-auth-settings-app {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.telegram-auth-settings-actions {
+		display: flex;
+		justify-content: flex-start;
+	}
+}
+
+.telegram-auth-snackbars {
+	position: fixed;
+	inset-inline-end: 1.5rem;
+	inset-block-end: 1.5rem;
+	z-index: 100000;
+	width: max-content;
+	max-width: calc(100vw - 3rem);
+	pointer-events: none;
+
+	> * {
+		pointer-events: auto;
+	}
+}
+
+.telegram-auth-instructions-heading {
+	margin: 0;
+	font-size: var(--wpds-typography-font-size-lg, 15px);
+	font-family: var(--wpds-typography-font-family-heading);
+    font-weight: var(--wpds-typography-font-weight-medium, 499);
+    line-height: var(--wpds-typography-line-height-sm, 20px);
+}
+
+.telegram-auth-instructions-intro {
+	margin-top: 0;
+}
+
+.telegram-auth-instructions-steps {
+	margin: 0;
+	padding-inline-start: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.telegram-auth-copyable {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.375rem;
+	padding-block: 0.375rem;
+	padding-inline: 0.5rem;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	max-width: 100%;
+
+	.telegram-auth-copyable-value {
+		flex: 1 1 auto;
+		background: transparent;
+		padding: 0;
+		font-size: 0.85rem;
+		word-break: break-all;
+	}
+
+	.telegram-auth-copyable-button {
+		flex: 0 0 auto;
+	}
+}
