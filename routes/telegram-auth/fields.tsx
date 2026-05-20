@@ -143,7 +143,7 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 				label,
 			})),
 			description: __(
-				'Telegram does not supply an email claim. "No email" creates accounts with an empty email — password recovery is unavailable until the user sets one themselves. "Placeholder email" synthesizes a non-routable address like tg_<id>@users.noreply.<your-site> so WordPress treats the account as having one; password recovery emails will silently bounce until the user replaces it.',
+				'Telegram does not share an email address. "No email" leaves the field blank — the user has to add one themselves before they can use password recovery. "Placeholder email" fills in an unreachable address like tg_user@users.noreply.example.com so the account looks complete to WordPress, but any recovery emails sent there will bounce.',
 				'telegram-auth'
 			),
 		},
