@@ -1,31 +1,50 @@
 # Files and directories excluded from the production plugin artifact
 # distributed to wp.org. Honoured by WordPress/plugin-check-action and
 # 10up/action-wordpress-plugin-deploy.
-
-# Dev infrastructure
-/.github
-/.vscode
+# Dev infrastructure. Patterns _without_ a leading slash match anywhere in
+# the tree — needed because Composer occasionally installs packages from
+# source (e.g. firebase/php-jwt ships a `.git/`, `.gitignore`, `.github/`,
+# and a `.php-cs-fixer.dist.php` config), and wp.org's plugin reviewer
+# rejects the upload if any of those land in the zip ("hidden files are
+# not permitted", "unexpected files: .git").
+.git
+.gitattributes
+.gitkeep
+.github
+.gitignore
+.php-cs-fixer*
+.styleci.yml
+.travis.yml
+.vscode
 /.wp-env
 /.editorconfig
-/.gitattributes
-/.gitignore
 /.npmrc
 /.nvmrc
 /.distignore
 
-# Source-only directories. The plugin ships the built artifacts only.
+# Source-only directories.
+#
+# /routes (TSX route source) and /packages (block source) ship in the
+# artifact so wp.org's automated source-availability check can match
+# the bundled JS under build/ back to its TypeScript origins. /packages
+# intermediate build outputs (build-module, build) are excluded further
+# down so only the source ships.
+#
+# `tests`, `test`, `docs`, `examples` are unanchored on purpose — vendor
+# packages routinely ship test fixtures (e.g. firebase/php-jwt's tests/)
+# that don't belong in the shipped plugin.
 /bin
-/docs
-/packages
-/routes
-/tests
+docs
+examples
+tests
+test
 /temp
 /node_modules
 /vendor/bin
 
-# Package manifests + lockfiles
-/composer.json
-/composer.lock
+# Package manifests + lockfiles. composer.json + composer.lock ship so
+# wp.org reviewers can audit dependencies (their automated check fails
+# the plugin when a Composer-using zip lacks composer.json).
 /package.json
 /package-lock.json
 /jest.config.cjs
