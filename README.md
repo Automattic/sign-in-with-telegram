@@ -13,7 +13,7 @@ Sign in with Telegram lets visitors sign in to your WordPress site using their T
 - **Profile sync** — display name and avatar from the Telegram `id_token` flow through to the WordPress profile automatically.
 - **No email-based account merging** — the only path from a Telegram identity to an existing WordPress user is an explicit, click-through link from a logged-in session, sidestepping the classic auto-merge account-takeover bug. (Telegram doesn't supply an `email` claim, so even an attacker with a Telegram account matching a victim's email can't cross the boundary.)
 - **Modern OIDC under the hood** — Authorization Code + PKCE (`S256`), browser-bound `state` + `nonce`, kid-aware JWKS rotation with rate-limited refresh, `alg === 'RS256'` enforced via an explicit allowed-algs list. The whole auth path lives on `wp-login.php`, which keeps it compatible with membership / LMS plugins that gate `/wp-admin/` for non-admin users.
-- **Settings UI** built with `@wordpress/dataviews` `DataForm` — paste your Client ID + Client Secret, choose a default role for new users, opt in to the `phone` or `telegram:bot_access` scopes, and validate your bot's credentials with a one-click Test Connection.
+- **Settings UI** built with `@wordpress/dataviews` `DataForm` — paste your Client ID + Client Secret, choose a default role for new users, and optionally collect the visitor's verified phone number or request permission for your bot to message them directly.
 
 ### How it compares to the legacy Login Widget
 

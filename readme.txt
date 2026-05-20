@@ -21,7 +21,7 @@ Sign in with Telegram lets visitors sign in to your WordPress site using their T
 * **Profile sync** — display name and avatar from the user's Telegram profile flow through to the WordPress profile automatically.
 * **No email-based account merging** — the only path from a Telegram identity to an existing WordPress user is an explicit, click-through link from a logged-in session, which closes the door on the classic SSO account-takeover bug.
 * **Modern OIDC** — Authorization Code + PKCE (S256), state and nonce protection, JWKS key rotation handled correctly, RS256-only signature verification.
-* **Settings page** with a Test Connection button so you can validate your bot's credentials without leaving wp-admin. Optional toggles for the `phone` and `telegram:bot_access` scopes.
+* **Settings page** in wp-admin where you paste the bot's Client ID + Client Secret, pick the default role for new users, and optionally collect the visitor's verified phone number or request permission for your bot to message them directly.
 
 = How it compares to the legacy Login Widget =
 
@@ -78,10 +78,9 @@ This plugin connects to Telegram's OpenID Connect provider at `oauth.telegram.or
 
 What is sent, and when:
 
-* **Sign-in start.** When a visitor clicks the "Sign in with Telegram" button, their browser is redirected to `oauth.telegram.org` with the bot's Client ID, a random `state`, a PKCE `code_challenge`, and the requested scopes (always `openid`; additionally `phone` and / or `telegram:bot_access` if you enabled those scopes in **Settings → Sign in with Telegram**). No data is sent server-to-server at this step — it's a normal browser redirect.
-* **Sign-in callback.** After the visitor approves the sign-in on Telegram's side, Telegram redirects them back to your site with an authorization `code`. The plugin then makes a single server-to-server request to Telegram's token endpoint, sending the Client ID, the Client Secret, the `code`, and the matching PKCE `code_verifier`. Telegram responds with a signed `id_token` containing the visitor's Telegram identifier, name, profile picture URL, and (if the `phone` scope was granted) phone number.
+* **Sign-in start.** When a visitor clicks the "Sign in with Telegram" button, their browser is redirected to `oauth.telegram.org` with the bot's Client ID, the requested scopes (always `openid` and `profile`; additionally `phone` and / or `telegram:bot_access` if you enabled those in **Settings → Sign in with Telegram**), a random `state`, a random `nonce`, and a PKCE `code_challenge` (SHA-256). No data is sent server-to-server at this step — it's a normal browser redirect.
+* **Sign-in callback.** After the visitor approves the sign-in on Telegram's side, Telegram redirects them back to your site with an authorization `code`. The plugin then makes a single server-to-server POST to Telegram's token endpoint, sending the Client ID + Client Secret (as HTTP Basic auth), the `code`, the matching PKCE `code_verifier`, and the redirect URI. Telegram responds with a signed `id_token` containing the visitor's Telegram identifier, name, profile picture URL, and (if the `phone` scope was granted) phone number.
 * **Key rotation.** The plugin periodically fetches Telegram's OpenID Connect discovery document and JSON Web Key Set (JWKS) from `oauth.telegram.org` so it can verify the `id_token` signature with the current keys. These requests are anonymous — no user data is sent.
-* **Test Connection.** When an admin clicks Test Connection on the settings page, the plugin fetches the discovery document from `oauth.telegram.org` to confirm the configured credentials reach a valid Telegram endpoint. No user data is sent.
 
 This service is provided by Telegram. Refer to Telegram's [Terms of Service](https://telegram.org/tos) and [Privacy Policy](https://telegram.org/privacy) for details on how Telegram handles the sign-in.
 
