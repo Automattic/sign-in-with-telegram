@@ -92,7 +92,7 @@ npm run build
 - `register_menu()` — `add_submenu_page('options-general.php', …, 'sign-in-with-telegram-wp-admin', $callback)` on the `admin_menu` hook. Renders the **wp-admin-mode** page (integrated into standard wp-admin layout — vs. the full-page mode that takes over the screen with its own sidebar).
 - `maybe_show_dependency_notice()` — admin notice when `has_runtime()` is false.
 
-The render callback we hand to `add_submenu_page` is `telegram_signin_telegram_signin_wp_admin_render_page`. wp-build generates that name as `<wpPlugin.name>_<page-id-with-underscores>_wp_admin_render_page`. The prefix duplication (`telegram_signin_telegram_signin_…`) is unavoidable — wp-build doesn't decouple the page id from the function-name suffix.
+The render callback we hand to `add_submenu_page` is `telegram_signin_sign_in_with_telegram_wp_admin_render_page`. wp-build generates that name as `<wpPlugin.name>_<page-id-with-underscores>_wp_admin_render_page` (here: `telegram_signin` + `sign_in_with_telegram`). The function-name suffix is locked to the page id, so renaming the page id requires updating this hardcoded reference in [src/class-bootstrap.php](src/class-bootstrap.php).
 
 ### Settings page architecture
 
