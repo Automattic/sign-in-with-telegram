@@ -55,12 +55,8 @@ $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LI
  * Per-user metadata we own outright. The fourth `$delete_all = true`
  * argument drops the rows for every user in one go without needing
  * to paginate through the users table.
- *
- * billing_phone is intentionally left alone: WooCommerce, BuddyPress,
- * several themes, and the user themselves all write to it, and there
- * is no way at uninstall time to know which value originated with
- * this plugin.
  */
 delete_metadata( 'user', 0, 'telegram_auth_sub', '', true );
 delete_metadata( 'user', 0, 'telegram_auth_picture_url', '', true );
+delete_metadata( 'user', 0, 'telegram_auth_phone', '', true );
 delete_metadata( 'user', 0, 'telegram_auth_granted_scopes', '', true );

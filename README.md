@@ -56,6 +56,38 @@ Telegram's OIDC provider doesn't supply an email claim, so the plugin creates ne
 
 No. The plugin doesn't touch WordPress passwords. Sign-in happens entirely through Telegram's authentication system; your WordPress site receives a signed token verifying that the user is who they say they are.
 
+## For developers
+
+### Reading the Telegram-verified phone number
+
+When the `phone` scope is granted, Telegram returns the user's phone number as a claim in the `id_token`. The plugin stores that value in a dedicated, plugin-owned usermeta key — `telegram_auth_phone`.
+
+Read it via the `Phone` helper so any registered filters run:
+
+```php
+$phone = \Telegram_Auth\Auth\Phone::for_user( $user_id );
+```
+
+### Surfacing the Telegram-verified phone as WooCommerce's billing phone
+
+If you run WooCommerce and want checkout to use the Telegram-verified phone whenever your customer hasn't explicitly entered one of their own, hook Woo's billing-phone getter:
+
+```php
+add_filter(
+	'woocommerce_customer_get_billing_phone',
+	static function ( string $phone, $customer ): string {
+		if ( '' !== $phone ) {
+			return $phone;
+		}
+		return \Telegram_Auth\Auth\Phone::for_user( $customer->get_id() );
+	},
+	10,
+	2
+);
+```
+
+The `telegram_auth_phone` filter on `Phone::for_user()` is the right place to redact or normalize the stored value before consumers see it.
+
 ## Local development
 
 Requirements: Docker, Node 24+, PHP 8.1+, Composer.
