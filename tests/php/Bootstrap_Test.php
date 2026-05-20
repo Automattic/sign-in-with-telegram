@@ -1,18 +1,18 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Bootstrap.
+ * Unit tests for Automattic\Telegram\SignIn\Bootstrap.
  *
- * @package Telegram_Auth\Tests
+ * @package Automattic\Telegram\SignIn\Tests
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests;
+namespace Automattic\Telegram\SignIn\Tests;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Bootstrap;
+use Automattic\Telegram\SignIn\Bootstrap;
 
 /**
  * Brain Monkey-stubbed coverage of the top-level bootstrap helpers.
@@ -46,7 +46,7 @@ final class Bootstrap_Test extends TestCase {
 
 		$this->assertSame(
 			array(
-				'settings'   => '<a href="https://example.test/wp-admin/options-general.php?page=telegram-auth-wp-admin">Settings</a>',
+					'settings'   => '<a href="https://example.test/wp-admin/options-general.php?page=sign-in-with-telegram-wp-admin">Settings</a>',
 				'deactivate' => '<a href="https://example.test/wp-admin/plugins.php?action=deactivate">Deactivate</a>',
 			),
 			$links

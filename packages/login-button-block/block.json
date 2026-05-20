@@ -1,13 +1,13 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "telegram-auth/login-button",
+	"name": "sign-in-with-telegram/login-button",
 	"title": "Telegram Login Button",
 	"category": "design",
 	"icon": "admin-network",
 	"description": "A button visitors can click to sign in with their Telegram account.",
 	"keywords": [ "telegram", "login", "auth", "sign in" ],
-	"textdomain": "telegram-auth",
+	"textdomain": "sign-in-with-telegram",
 	"supports": {
 		"html": false,
 		"align": [ "left", "center", "right" ],

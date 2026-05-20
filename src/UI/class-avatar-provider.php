@@ -2,14 +2,14 @@
 /**
  * Telegram-supplied avatar provider.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\UI;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\Auth\Login_Handler;
+use Automattic\Telegram\SignIn\Login_Handler;
 use WP_User;
 
 defined( 'ABSPATH' ) || exit;

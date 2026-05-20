@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
-<ruleset name="telegram-auth">
-	<description>Coding standards for the Telegram Auth plugin.</description>
+<ruleset name="sign-in-with-telegram">
+	<description>Coding standards for the Sign in with Telegram plugin.</description>
 
 	<file>src</file>
-	<file>telegram-auth.php</file>
+	<file>sign-in-with-telegram.php</file>
 	<file>uninstall.php</file>
 
 	<!--
@@ -23,13 +23,13 @@
 
 	<rule ref="WordPress.WP.I18n">
 		<properties>
-			<property name="text_domain" type="array" value="telegram-auth"/>
+			<property name="text_domain" type="array" value="sign-in-with-telegram"/>
 		</properties>
 	</rule>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
-			<property name="prefixes" type="array" value="telegram_auth,Telegram_Auth,TELEGRAM_AUTH"/>
+			<property name="prefixes" type="array" value="telegram_signin,Automattic\Telegram\SignIn,TELEGRAM_SIGNIN"/>
 		</properties>
 	</rule>
 

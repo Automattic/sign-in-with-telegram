@@ -1,14 +1,14 @@
-# Telegram Auth
+# Sign in with Telegram
 
 Let your visitors sign in to WordPress with their Telegram account.
 
 ## Description
 
-Telegram Auth lets visitors sign in to your WordPress site using their Telegram account, via Telegram's OpenID Connect provider. Unlike older Telegram-login plugins that embed Telegram's JavaScript "Login Widget", this plugin uses a standard server-side OIDC redirect flow — no third-party scripts on your pages, no widget cookies, works in any browser including those with strict privacy and tracker-blocking settings.
+Sign in with Telegram lets visitors sign in to your WordPress site using their Telegram account, via Telegram's OpenID Connect provider. Unlike older Telegram-login plugins that embed Telegram's JavaScript "Login Widget", this plugin uses a standard server-side OIDC redirect flow — no third-party scripts on your pages, no widget cookies, works in any browser including those with strict privacy and tracker-blocking settings.
 
 ### Features
 
-- **"Sign in with Telegram" button** on the standard `wp-login.php` screen, as a `[telegram_auth_button]` shortcode anywhere on your site, and as a Block Editor block — one helper, three surfaces, identical HTML.
+- **"Sign in with Telegram" button** on the standard `wp-login.php` screen, as a `[telegram_signin_button]` shortcode anywhere on your site, and as a Block Editor block — one helper, three surfaces, identical HTML.
 - **Account linking** from the user profile screen. A logged-in WordPress user can connect their Telegram account; disconnect is gated by a sole-auth-method guard so nobody locks themselves out.
 - **Profile sync** — display name and avatar from the Telegram `id_token` flow through to the WordPress profile automatically.
 - **No email-based account merging** — the only path from a Telegram identity to an existing WordPress user is an explicit, click-through link from a logged-in session, sidestepping the classic auto-merge account-takeover bug. (Telegram doesn't supply an `email` claim, so even an attacker with a Telegram account matching a victim's email can't cross the boundary.)
@@ -23,16 +23,16 @@ Telegram's older [Login Widget](https://core.telegram.org/widgets/login-legacy) 
 - The widget's authentication hash is an HMAC-SHA256 over your bot token, so anyone who wants to verify a login has to hold a copy of that secret. There's no standard JWT / JWKS story to lean on.
 - Key rotation is manual — changing the HMAC key means rotating the bot token in BotFather and updating it on every server that verifies logins.
 
-Telegram Auth uses Telegram's newer OpenID Connect provider instead — a standard server-side redirect flow with a properly signed RS256 `id_token`. No third-party scripts on your pages, no shared bot-token secret with verifiers, automatic key rotation via JWKS. It behaves the same regardless of how privacy-locked-down the visitor's browser is.
+Sign in with Telegram uses Telegram's newer OpenID Connect provider instead — a standard server-side redirect flow with a properly signed RS256 `id_token`. No third-party scripts on your pages, no shared bot-token secret with verifiers, automatic key rotation via JWKS. It behaves the same regardless of how privacy-locked-down the visitor's browser is.
 
 ## Installation
 
 1. Install and activate the plugin.
 2. Open [@BotFather](https://t.me/BotFather) in Telegram and launch its mini app from the attachment menu (the paperclip icon in the chat).
 3. Pick your bot under **My bots**, then open **Login widget**. If your bot is still on the legacy widget, click **Switch to OpenID Connect Login** and confirm.
-4. Register the callback URL under **Redirect URIs** — `https://yoursite.com/wp-login.php?action=telegram_auth_callback` — and add the matching site origin (`https://yoursite.com`) to **Trusted Origins**. HTTPS is required.
-5. Copy the **Client ID** and **Client Secret** that BotFather shows you and paste them into **Settings → Telegram Auth** in wp-admin.
-6. Optionally drop the **Telegram Login Button** block on your homepage, or add the `[telegram_auth_button]` shortcode anywhere you want a sign-in button.
+4. Register the callback URL under **Redirect URIs** — `https://yoursite.com/wp-login.php?action=telegram_signin_callback` — and add the matching site origin (`https://yoursite.com`) to **Trusted Origins**. HTTPS is required.
+5. Copy the **Client ID** and **Client Secret** that BotFather shows you and paste them into **Settings → Sign in with Telegram** in wp-admin.
+6. Optionally drop the **Telegram Login Button** block on your homepage, or add the `[telegram_signin_button]` shortcode anywhere you want a sign-in button.
 
 ## Frequently Asked Questions
 
@@ -60,12 +60,12 @@ No. The plugin doesn't touch WordPress passwords. Sign-in happens entirely throu
 
 ### Reading the Telegram-verified phone number
 
-When the `phone` scope is granted, Telegram returns the user's phone number as a claim in the `id_token`. The plugin stores that value in a dedicated, plugin-owned usermeta key — `telegram_auth_phone`.
+When the `phone` scope is granted, Telegram returns the user's phone number as a claim in the `id_token`. The plugin stores that value in a dedicated, plugin-owned usermeta key — `telegram_signin_phone`.
 
 Read it via the `Phone` helper so any registered filters run:
 
 ```php
-$phone = \Telegram_Auth\Auth\Phone::for_user( $user_id );
+$phone = \Automattic\Telegram\SignIn\Phone::for_user( $user_id );
 ```
 
 ### Surfacing the Telegram-verified phone as WooCommerce's billing phone
@@ -79,14 +79,14 @@ add_filter(
 		if ( '' !== $phone ) {
 			return $phone;
 		}
-		return \Telegram_Auth\Auth\Phone::for_user( $customer->get_id() );
+		return \Automattic\Telegram\SignIn\Phone::for_user( $customer->get_id() );
 	},
 	10,
 	2
 );
 ```
 
-The `telegram_auth_phone` filter on `Phone::for_user()` is the right place to redact or normalize the stored value before consumers see it.
+The `telegram_signin_phone` filter on `Phone::for_user()` is the right place to redact or normalize the stored value before consumers see it.
 
 ## Local development
 
@@ -113,8 +113,8 @@ Create a `.wp-env.override.json` at the repo root (gitignored) with this shape:
 {
 	"$schema": "https://schemas.wp.org/trunk/wp-env.json",
 	"config": {
-		"TELEGRAM_AUTH_CLIENT_ID": "123456789",
-		"TELEGRAM_AUTH_CLIENT_SECRET": "your-bot-oidc-secret"
+		"TELEGRAM_SIGNIN_CLIENT_ID": "123456789",
+		"TELEGRAM_SIGNIN_CLIENT_SECRET": "your-bot-oidc-secret"
 	}
 }
 ```
@@ -135,7 +135,7 @@ Get the values from BotFather's mini app — open [@BotFather](https://t.me/BotF
 **Telegram requires a public HTTPS redirect URI** — `http://localhost:8888/...` is rejected at the BotFather step. To work against the local stack, tunnel it through a public hostname using [Jurassic Tube](https://jurassic.tube) (Automattic), [ngrok](https://ngrok.com), or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), then register the tunneled URL with BotFather:
 
 ```
-https://<your-tunnel-host>/wp-login.php?action=telegram_auth_callback
+https://<your-tunnel-host>/wp-login.php?action=telegram_signin_callback
 ```
 
 Match `WP_SITEURL` / `WP_HOME` in `.wp-env.override.json` to the tunnel host so WordPress generates the same URLs it tells Telegram about, otherwise the callback redirect mismatches.

@@ -1,20 +1,20 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Privacy\Personal_Data.
+ * Unit tests for Automattic\Telegram\SignIn\Personal_Data.
  *
- * @package Telegram_Auth\Tests\Privacy
+ * @package Automattic\Telegram\SignIn\Tests\Privacy
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\Privacy;
+namespace Automattic\Telegram\SignIn\Tests\Privacy;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Auth\Scopes;
-use Telegram_Auth\Privacy\Personal_Data;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Scopes;
+use Automattic\Telegram\SignIn\Personal_Data;
 use WP_User;
 
 /**
@@ -114,9 +114,9 @@ final class Personal_Data_Test extends TestCase {
 		$this->assertCount( 1, $response['data'] );
 
 		$group = $response['data'][0];
-		$this->assertSame( 'telegram-auth', $group['group_id'] );
-		$this->assertSame( 'Telegram Auth', $group['group_label'] );
-		$this->assertSame( 'telegram-auth-123', $group['item_id'] );
+		$this->assertSame( 'sign-in-with-telegram', $group['group_id'] );
+		$this->assertSame( 'Sign in with Telegram', $group['group_label'] );
+		$this->assertSame( 'sign-in-with-telegram-123', $group['item_id'] );
 
 		$items = array_column( $group['data'], 'value', 'name' );
 		$this->assertSame( 'telegram-sub-123', $items['Telegram account identifier'] );
@@ -194,7 +194,7 @@ final class Personal_Data_Test extends TestCase {
 		Functions\expect( 'wp_add_privacy_policy_content' )
 			->once()
 			->with(
-				'Telegram Auth',
+				'Sign in with Telegram',
 				\Mockery::on(
 					static fn( string $content ): bool => str_contains( $content, 'Telegram OpenID Connect' )
 						&& str_contains( $content, 'Telegram account identifier' )

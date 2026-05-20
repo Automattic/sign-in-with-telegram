@@ -2,12 +2,12 @@
 /**
  * RSA-keypair + JWT fixture helper for Token_Validator_Test.
  *
- * @package Telegram_Auth\Tests\OIDC
+ * @package Automattic\Telegram\SignIn\Tests\OIDC
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\OIDC;
+namespace Automattic\Telegram\SignIn\Tests\OIDC;
 
 use Firebase\JWT\JWT;
 

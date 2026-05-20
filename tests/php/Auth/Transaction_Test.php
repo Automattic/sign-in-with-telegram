@@ -1,21 +1,21 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Auth\Transaction.
+ * Unit tests for Automattic\Telegram\SignIn\Transaction.
  *
- * @package Telegram_Auth\Tests\Auth
+ * @package Automattic\Telegram\SignIn\Tests\Auth
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\Auth;
+namespace Automattic\Telegram\SignIn\Tests\Auth;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Auth\Consumed_Transaction;
-use Telegram_Auth\Auth\Started_Transaction;
-use Telegram_Auth\Auth\Transaction;
-use Telegram_Auth\Auth\Transaction_Exception;
+use Automattic\Telegram\SignIn\Consumed_Transaction;
+use Automattic\Telegram\SignIn\Started_Transaction;
+use Automattic\Telegram\SignIn\Transaction;
+use Automattic\Telegram\SignIn\Transaction_Exception;
 
 /**
  * Brain Monkey-stubbed coverage of the OIDC login transaction store.

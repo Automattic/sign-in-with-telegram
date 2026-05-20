@@ -2,27 +2,27 @@
 /**
  * Plugin bootstrap. Registers the WP Build polyfills early so the
  * wp-build-generated pages can mount @wordpress/boot, then adds the
- * Settings → Telegram Auth submenu.
+ * Settings → Sign in with Telegram submenu.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth;
+namespace Automattic\Telegram\SignIn;
 
 use Automattic\Jetpack\WP_Build_Polyfills\WP_Build_Polyfills;
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\Admin\Users_List_Columns;
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Auth\Transaction;
-use Telegram_Auth\Http\Endpoints;
-use Telegram_Auth\Http\Failure_Renderer;
-use Telegram_Auth\Privacy\Personal_Data;
-use Telegram_Auth\UI\Avatar_Provider;
-use Telegram_Auth\UI\Login_Button;
-use Telegram_Auth\UI\Login_Button_Block;
-use Telegram_Auth\UI\Profile_Section;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Users_List_Columns;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Transaction;
+use Automattic\Telegram\SignIn\Endpoints;
+use Automattic\Telegram\SignIn\Failure_Renderer;
+use Automattic\Telegram\SignIn\Personal_Data;
+use Automattic\Telegram\SignIn\Avatar_Provider;
+use Automattic\Telegram\SignIn\Login_Button;
+use Automattic\Telegram\SignIn\Login_Button_Block;
+use Automattic\Telegram\SignIn\Profile_Section;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -32,14 +32,14 @@ defined( 'ABSPATH' ) || exit;
 class Bootstrap {
 
 	/**
-	 * Menu slug for the Settings → Telegram Auth submenu.
+	 * Menu slug for the Settings → Sign in with Telegram submenu.
 	 *
-	 * The wp-build page id is "telegram-auth" (in package.json wpPlugin.pages).
+	 * The wp-build page id is "sign-in-with-telegram" (in package.json wpPlugin.pages).
 	 * The integrated wp-admin render callback page-wp-admin.php intercepts the
 	 * URL ?page=<page-id>-wp-admin, so we register the submenu under the
 	 * matching slug.
 	 */
-	public const PAGE_SLUG = 'telegram-auth-wp-admin';
+	public const PAGE_SLUG = 'sign-in-with-telegram-wp-admin';
 
 	/**
 	 * Register WordPress hooks.
@@ -76,7 +76,7 @@ class Bootstrap {
 		);
 
 		WP_Build_Polyfills::register(
-			'telegram-auth',
+			'sign-in-with-telegram',
 			array(
 				// Force-replaced classic scripts: Core's wp-notices is missing
 				// component exports @wordpress/boot needs, and wp-private-apis'
@@ -121,17 +121,17 @@ class Bootstrap {
 		$profile_section->register();
 		$personal_data->register();
 
-		$plugin_file = defined( 'TELEGRAM_AUTH_PLUGIN_FILE' )
-			? TELEGRAM_AUTH_PLUGIN_FILE
-			: dirname( __DIR__ ) . '/telegram-auth.php';
-		add_filter( 'plugin_action_links_' . plugin_basename( $plugin_file ), array( self::class, 'add_settings_action_link' ) );
+		add_filter(
+			'plugin_action_links_' . plugin_basename( dirname( __DIR__ ) . '/sign-in-with-telegram.php' ),
+			array( self::class, 'add_settings_action_link' )
+		);
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 
 		add_action(
 			'admin_print_scripts-settings_page_' . self::PAGE_SLUG,
 			static function () use ( $settings ): void {
 				$site_origin  = self::site_origin();
-				$redirect_uri = add_query_arg( 'action', 'telegram_auth_callback', wp_login_url() );
+				$redirect_uri = add_query_arg( 'action', 'telegram_signin_callback', wp_login_url() );
 
 				$data = array(
 					'settings'     => $settings->get_all(),
@@ -143,7 +143,7 @@ class Bootstrap {
 					'redirectUri'  => $redirect_uri,
 				);
 				printf(
-					'<script>window.telegramAuthData = %s;</script>',
+					'<script>window.telegramSigninData = %s;</script>',
 					wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode escapes appropriately for a script context.
 				);
 			}
@@ -162,14 +162,14 @@ class Bootstrap {
 		$settings_link = sprintf(
 			'<a href="%1$s">%2$s</a>',
 			esc_url( $settings_url ),
-			esc_html__( 'Settings', 'telegram-auth' )
+			esc_html__( 'Settings', 'sign-in-with-telegram' )
 		);
 
 		return array_merge( array( 'settings' => $settings_link ), $links );
 	}
 
 	/**
-	 * Register the Settings → Telegram Auth submenu.
+	 * Register the Settings → Sign in with Telegram submenu.
 	 */
 	public static function register_menu(): void {
 		// wp-admin-mode render callback from wp-build's pages template.
@@ -177,15 +177,15 @@ class Bootstrap {
 		// (vs. the full-page render which replaces it). Function name is
 		// PREFIX (wpPlugin.name) + page id (with hyphens → underscores)
 		// + "_wp_admin_render_page".
-		$render_callback = 'telegram_auth_telegram_auth_wp_admin_render_page';
+		$render_callback = 'telegram_signin_sign_in_with_telegram_wp_admin_render_page';
 		if ( ! function_exists( $render_callback ) ) {
 			return;
 		}
 
 		add_submenu_page(
 			'options-general.php',
-			__( 'Telegram Auth', 'telegram-auth' ),
-			__( 'Telegram Auth', 'telegram-auth' ),
+			__( 'Sign in with Telegram', 'sign-in-with-telegram' ),
+			__( 'Sign in with Telegram', 'sign-in-with-telegram' ),
 			'manage_options',
 			self::PAGE_SLUG,
 			$render_callback

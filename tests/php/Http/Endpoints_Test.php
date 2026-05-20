@@ -1,24 +1,24 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Http\Endpoints.
+ * Unit tests for Automattic\Telegram\SignIn\Endpoints.
  *
- * @package Telegram_Auth\Tests\Http
+ * @package Automattic\Telegram\SignIn\Tests\Http
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\Http;
+namespace Automattic\Telegram\SignIn\Tests\Http;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Auth\Started_Transaction;
-use Telegram_Auth\Auth\Transaction;
-use Telegram_Auth\Http\Endpoints;
-use Telegram_Auth\Http\Failure_Renderer;
-use Telegram_Auth\OIDC\Client;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Started_Transaction;
+use Automattic\Telegram\SignIn\Transaction;
+use Automattic\Telegram\SignIn\Endpoints;
+use Automattic\Telegram\SignIn\Failure_Renderer;
+use Automattic\Telegram\SignIn\Client;
 use WP_Error;
 
 /**

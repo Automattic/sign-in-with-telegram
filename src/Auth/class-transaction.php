@@ -2,12 +2,12 @@
 /**
  * Single-use OIDC login transaction (state/nonce/PKCE/cookie).
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Auth;
+namespace Automattic\Telegram\SignIn;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -28,11 +28,11 @@ defined( 'ABSPATH' ) || exit;
  * state matches the callback's state.
  *
  * Cookie strategy:
- *   - Production (HTTPS, non-dev host): `__Host-telegram_auth_tx`,
+ *   - Production (HTTPS, non-dev host): `__Host-telegram_signin_tx`,
  *     `Secure; HttpOnly; SameSite=Lax; Path=/; Domain=` (no domain — the
  *     `__Host-` prefix mandates it).
  *   - Dev (HTTP, or *.local / *.test / localhost / 127.0.0.1):
- *     `telegram_auth_tx` (unprefixed), Secure dropped. Print an admin
+ *     `telegram_signin_tx` (unprefixed), Secure dropped. Print an admin
  *     notice elsewhere reminding contributors that production must be
  *     served over HTTPS.
  */
@@ -40,7 +40,7 @@ class Transaction {
 
 	/**
 	 * Default transient TTL in seconds. Filterable via
-	 * `telegram_auth_transaction_ttl` so deployments with unusually slow
+	 * `telegram_signin_transaction_ttl` so deployments with unusually slow
 	 * round-trips (think: enterprise proxies) can bump it.
 	 */
 	public const TTL_SECONDS = 5 * MINUTE_IN_SECONDS;
@@ -48,17 +48,17 @@ class Transaction {
 	/**
 	 * Cookie name used in production (HTTPS, non-dev host).
 	 */
-	public const COOKIE_NAME_PROD = '__Host-telegram_auth_tx';
+	public const COOKIE_NAME_PROD = '__Host-telegram_signin_tx';
 
 	/**
 	 * Cookie name used on dev hosts (HTTP allowed).
 	 */
-	public const COOKIE_NAME_DEV = 'telegram_auth_tx';
+	public const COOKIE_NAME_DEV = 'telegram_signin_tx';
 
 	/**
 	 * Transient key prefix; the random id from the cookie is appended.
 	 */
-	public const TRANSIENT_PREFIX = 'telegram_auth_tx_';
+	public const TRANSIENT_PREFIX = 'telegram_signin_tx_';
 
 	/**
 	 * Hostnames (lowercased) that always count as dev hosts even with HTTPS.
@@ -130,7 +130,7 @@ class Transaction {
 		$random_id = $this->read_cookie();
 		if ( null === $random_id ) {
 			throw new Transaction_Exception(
-				esc_html__( 'Transaction cookie missing or empty.', 'telegram-auth' ),
+				esc_html__( 'Transaction cookie missing or empty.', 'sign-in-with-telegram' ),
 				Transaction_Exception::STATE_INVALID
 			);
 		}
@@ -144,14 +144,14 @@ class Transaction {
 
 		if ( ! is_array( $payload ) ) {
 			throw new Transaction_Exception(
-				esc_html__( 'Transaction expired or already consumed.', 'telegram-auth' ),
+				esc_html__( 'Transaction expired or already consumed.', 'sign-in-with-telegram' ),
 				Transaction_Exception::STATE_EXPIRED
 			);
 		}
 
 		if ( ! isset( $payload['state'] ) || ! hash_equals( (string) $payload['state'], $callback_state ) ) {
 			throw new Transaction_Exception(
-				esc_html__( 'Transaction state does not match callback state.', 'telegram-auth' ),
+				esc_html__( 'Transaction state does not match callback state.', 'sign-in-with-telegram' ),
 				Transaction_Exception::STATE_INVALID
 			);
 		}
@@ -187,7 +187,7 @@ class Transaction {
 	/**
 	 * Resolve the cookie name based on whether we're on a dev host or production.
 	 *
-	 * On production (HTTPS + non-dev host) we use `__Host-telegram_auth_tx`,
+	 * On production (HTTPS + non-dev host) we use `__Host-telegram_signin_tx`,
 	 * whose prefix mandates Secure + Path=/ + no Domain. Dev hosts (HTTP, or
 	 * the well-known dev TLDs) get the unprefixed name with Secure dropped.
 	 *
@@ -226,12 +226,12 @@ class Transaction {
 	}
 
 	/**
-	 * Effective TTL, after the `telegram_auth_transaction_ttl` filter.
+	 * Effective TTL, after the `telegram_signin_transaction_ttl` filter.
 	 *
 	 * @return int
 	 */
 	private function ttl(): int {
-		$filtered = (int) apply_filters( 'telegram_auth_transaction_ttl', self::TTL_SECONDS );
+		$filtered = (int) apply_filters( 'telegram_signin_transaction_ttl', self::TTL_SECONDS );
 		return $filtered > 0 ? $filtered : self::TTL_SECONDS;
 	}
 

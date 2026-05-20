@@ -2,12 +2,12 @@
 /**
  * OIDC id_token validator.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\OIDC;
+namespace Automattic\Telegram\SignIn;
 
 use Firebase\JWT\BeforeValidException;
 use Firebase\JWT\ExpiredException;
@@ -68,7 +68,7 @@ class Token_Validator {
 	 * rather than triggering another refresh — we already have the latest
 	 * keys and the kid still isn't there.
 	 */
-	public const REFRESH_LOCKOUT_TRANSIENT = 'telegram_auth_jwks_refresh_lockout';
+	public const REFRESH_LOCKOUT_TRANSIENT = 'telegram_signin_jwks_refresh_lockout';
 
 	/**
 	 * Build the validator.
@@ -113,19 +113,19 @@ class Token_Validator {
 			$payload = JWT::decode( $id_token, $key );
 		} catch ( BeforeValidException $e ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token nbf is in the future.', 'telegram-auth' ),
+				esc_html__( 'Token nbf is in the future.', 'sign-in-with-telegram' ),
 				OIDC_Exception::CLOCK_SKEW,
 				$e
 			);
 		} catch ( ExpiredException $e ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token has expired.', 'telegram-auth' ),
+				esc_html__( 'Token has expired.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID,
 				$e
 			);
 		} catch ( SignatureInvalidException $e ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token signature did not verify.', 'telegram-auth' ),
+				esc_html__( 'Token signature did not verify.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID,
 				$e
 			);
@@ -133,7 +133,7 @@ class Token_Validator {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: %s: error from the JWT library. */
-					esc_html__( 'Token decoding failed: %s', 'telegram-auth' ),
+					esc_html__( 'Token decoding failed: %s', 'sign-in-with-telegram' ),
 					esc_html( $e->getMessage() )
 				),
 				OIDC_Exception::TOKEN_INVALID,
@@ -151,7 +151,7 @@ class Token_Validator {
 		$this->assert_nonce( $claims, $expected_nonce );
 
 		do_action(
-			'telegram_auth_debug',
+			'telegram_signin_debug',
 			'token_validated',
 			array(
 				'sub' => $claims['sub'] ?? null,
@@ -175,7 +175,7 @@ class Token_Validator {
 		$parts = explode( '.', $id_token );
 		if ( 3 !== count( $parts ) ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token is not a 3-segment JWT.', 'telegram-auth' ),
+				esc_html__( 'Token is not a 3-segment JWT.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID
 			);
 		}
@@ -183,7 +183,7 @@ class Token_Validator {
 		$decoded = json_decode( JWT::urlsafeB64Decode( $parts[0] ), true );
 		if ( ! is_array( $decoded ) ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token header is not valid JSON.', 'telegram-auth' ),
+				esc_html__( 'Token header is not valid JSON.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID
 			);
 		}
@@ -203,7 +203,7 @@ class Token_Validator {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: %s: actual alg value from the token header (or "missing"). */
-					esc_html__( 'Token alg must be RS256, got %s.', 'telegram-auth' ),
+					esc_html__( 'Token alg must be RS256, got %s.', 'sign-in-with-telegram' ),
 					esc_html( (string) ( $header['alg'] ?? 'missing' ) )
 				),
 				OIDC_Exception::TOKEN_INVALID
@@ -223,7 +223,7 @@ class Token_Validator {
 	private function require_kid( array $header ): string {
 		if ( empty( $header['kid'] ) || ! is_string( $header['kid'] ) ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token header missing kid.', 'telegram-auth' ),
+				esc_html__( 'Token header missing kid.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID
 			);
 		}
@@ -255,7 +255,7 @@ class Token_Validator {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: %s: kid value from the JWT header. */
-					esc_html__( 'JWKS does not contain a key for kid %s (cooldown active).', 'telegram-auth' ),
+					esc_html__( 'JWKS does not contain a key for kid %s (cooldown active).', 'sign-in-with-telegram' ),
 					esc_html( $kid )
 				),
 				OIDC_Exception::TOKEN_INVALID
@@ -268,7 +268,7 @@ class Token_Validator {
 			$jwks = $this->client->refresh_jwks();
 		} catch ( OIDC_Exception $e ) {
 			throw new OIDC_Exception(
-				esc_html__( 'JWKS refresh failed and no usable key in cache.', 'telegram-auth' ),
+				esc_html__( 'JWKS refresh failed and no usable key in cache.', 'sign-in-with-telegram' ),
 				OIDC_Exception::PROVIDER_UNREACHABLE,
 				$e
 			);
@@ -282,7 +282,7 @@ class Token_Validator {
 		throw new OIDC_Exception(
 			sprintf(
 				/* translators: %s: kid value from the JWT header. */
-				esc_html__( 'JWKS does not contain a key for kid %s after refresh.', 'telegram-auth' ),
+				esc_html__( 'JWKS does not contain a key for kid %s after refresh.', 'sign-in-with-telegram' ),
 				esc_html( $kid )
 			),
 			OIDC_Exception::TOKEN_INVALID
@@ -311,7 +311,7 @@ class Token_Validator {
 			return JWK::parseKeySet( $jwks );
 		} catch ( \UnexpectedValueException | \InvalidArgumentException | \DomainException $e ) {
 			throw new OIDC_Exception(
-				esc_html__( 'JWKS could not be parsed; provider returned malformed key data.', 'telegram-auth' ),
+				esc_html__( 'JWKS could not be parsed; provider returned malformed key data.', 'sign-in-with-telegram' ),
 				OIDC_Exception::PROVIDER_UNREACHABLE,
 				$e
 			);
@@ -332,7 +332,7 @@ class Token_Validator {
 				throw new OIDC_Exception(
 					sprintf(
 						/* translators: %s: claim name. */
-						esc_html__( 'Token missing required claim "%s".', 'telegram-auth' ),
+						esc_html__( 'Token missing required claim "%s".', 'sign-in-with-telegram' ),
 						esc_html( $claim )
 					),
 					OIDC_Exception::TOKEN_INVALID
@@ -351,7 +351,7 @@ class Token_Validator {
 	private function assert_issuer( array $claims ): void {
 		if ( $claims['iss'] !== $this->expected_issuer ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token iss does not match expected issuer.', 'telegram-auth' ),
+				esc_html__( 'Token iss does not match expected issuer.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID
 			);
 		}
@@ -374,13 +374,13 @@ class Token_Validator {
 		if ( is_array( $aud ) ) {
 			if ( ! in_array( $this->expected_audience, $aud, true ) ) {
 				throw new OIDC_Exception(
-					esc_html__( 'Token aud does not contain expected audience.', 'telegram-auth' ),
+					esc_html__( 'Token aud does not contain expected audience.', 'sign-in-with-telegram' ),
 					OIDC_Exception::TOKEN_INVALID
 				);
 			}
 			if ( ! isset( $claims['azp'] ) || $claims['azp'] !== $this->expected_audience ) {
 				throw new OIDC_Exception(
-					esc_html__( 'Token aud is multi-valued but azp does not name us.', 'telegram-auth' ),
+					esc_html__( 'Token aud is multi-valued but azp does not name us.', 'sign-in-with-telegram' ),
 					OIDC_Exception::TOKEN_INVALID
 				);
 			}
@@ -389,7 +389,7 @@ class Token_Validator {
 
 		if ( $aud !== $this->expected_audience ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token aud does not match expected audience.', 'telegram-auth' ),
+				esc_html__( 'Token aud does not match expected audience.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID
 			);
 		}
@@ -414,7 +414,7 @@ class Token_Validator {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: 1: iat value from the token. 2: server time. 3: tolerance in seconds. */
-					esc_html__( 'Token iat (%1$d) is outside server-time skew tolerance ±%3$d seconds (server: %2$d).', 'telegram-auth' ),
+					esc_html__( 'Token iat (%1$d) is outside server-time skew tolerance ±%3$d seconds (server: %2$d).', 'sign-in-with-telegram' ),
 					$iat,
 					$now,
 					(int) self::SKEW_TOLERANCE_SECONDS
@@ -435,7 +435,7 @@ class Token_Validator {
 	private function assert_nonce( array $claims, string $expected_nonce ): void {
 		if ( $claims['nonce'] !== $expected_nonce ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token nonce does not match stored nonce.', 'telegram-auth' ),
+				esc_html__( 'Token nonce does not match stored nonce.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID
 			);
 		}

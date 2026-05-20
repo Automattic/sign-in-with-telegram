@@ -1,20 +1,20 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\OIDC\Client.
+ * Unit tests for Automattic\Telegram\SignIn\Client.
  *
- * @package Telegram_Auth\Tests\OIDC
+ * @package Automattic\Telegram\SignIn\Tests\OIDC
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\OIDC;
+namespace Automattic\Telegram\SignIn\Tests\OIDC;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\OIDC\Client;
-use Telegram_Auth\OIDC\Config;
-use Telegram_Auth\OIDC\OIDC_Exception;
+use Automattic\Telegram\SignIn\Client;
+use Automattic\Telegram\SignIn\Config;
+use Automattic\Telegram\SignIn\OIDC_Exception;
 use WP_Error;
 
 /**
@@ -64,7 +64,7 @@ final class Client_Test extends TestCase {
 			new Config(
 				client_id:     '123456789',
 				client_secret: 'secret',
-				redirect_uri:  'https://example.test/wp-login.php?action=telegram_auth_callback',
+				redirect_uri:  'https://example.test/wp-login.php?action=telegram_signin_callback',
 				discovery_url: self::DISCOVERY_URL,
 			)
 		);
@@ -158,7 +158,7 @@ final class Client_Test extends TestCase {
 
 		$this->assertSame( 'code', $query['response_type'] );
 		$this->assertSame( '123456789', $query['client_id'] );
-		$this->assertSame( 'https://example.test/wp-login.php?action=telegram_auth_callback', $query['redirect_uri'] );
+		$this->assertSame( 'https://example.test/wp-login.php?action=telegram_signin_callback', $query['redirect_uri'] );
 		$this->assertSame( 'state-token', $query['state'] );
 		$this->assertSame( 'nonce-token', $query['nonce'] );
 		$this->assertSame( 'challenge-token', $query['code_challenge'] );
@@ -195,7 +195,7 @@ final class Client_Test extends TestCase {
 						return 'authorization_code' === $body['grant_type']
 							&& 'auth-code' === $body['code']
 							&& 'verifier' === $body['code_verifier']
-							&& 'https://example.test/wp-login.php?action=telegram_auth_callback' === $body['redirect_uri'];
+							&& 'https://example.test/wp-login.php?action=telegram_signin_callback' === $body['redirect_uri'];
 					}
 				)
 			)

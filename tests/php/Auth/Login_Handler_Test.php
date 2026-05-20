@@ -1,25 +1,25 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Auth\Login_Handler.
+ * Unit tests for Automattic\Telegram\SignIn\Login_Handler.
  *
- * @package Telegram_Auth\Tests\Auth
+ * @package Automattic\Telegram\SignIn\Tests\Auth
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\Auth;
+namespace Automattic\Telegram\SignIn\Tests\Auth;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\Auth\Consumed_Transaction;
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Auth\Scopes;
-use Telegram_Auth\Auth\Transaction;
-use Telegram_Auth\Auth\Transaction_Exception;
-use Telegram_Auth\Http\Failure_Renderer;
-use Telegram_Auth\OIDC\OIDC_Exception;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Consumed_Transaction;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Scopes;
+use Automattic\Telegram\SignIn\Transaction;
+use Automattic\Telegram\SignIn\Transaction_Exception;
+use Automattic\Telegram\SignIn\Failure_Renderer;
+use Automattic\Telegram\SignIn\OIDC_Exception;
 
 /**
  * Brain Monkey-stubbed coverage of the callback handler's branches.
@@ -65,7 +65,7 @@ final class Login_Handler_Test extends TestCase {
 		);
 		Functions\when( 'get_option' )->alias(
 			static fn( string $key, $default = false ) => match ( $key ) {
-				'telegram_auth_settings' => $default,
+				'telegram_signin_settings' => $default,
 				'default_role'           => 'subscriber',
 				default                  => $default,
 			}
@@ -172,7 +172,7 @@ final class Login_Handler_Test extends TestCase {
 		Functions\when( 'get_users' )->justReturn( array() );
 		Functions\when( 'get_option' )->alias(
 			static fn( string $key, $default = false ) => match ( $key ) {
-				'telegram_auth_settings' => array( 'allow_signups' => false ),
+				'telegram_signin_settings' => array( 'allow_signups' => false ),
 				'default_role'           => 'subscriber',
 				default                  => $default,
 			}
@@ -196,7 +196,7 @@ final class Login_Handler_Test extends TestCase {
 		$captured_sub  = null;
 		Functions\when( 'update_user_meta' )->alias(
 			function ( int $user_id, string $key, $value ) use ( &$captured_user, &$captured_sub ) {
-				if ( 'telegram_auth_sub' === $key ) {
+				if ( 'telegram_signin_sub' === $key ) {
 					$captured_user = $user_id;
 					$captured_sub  = $value;
 				}
@@ -285,11 +285,11 @@ final class Login_Handler_Test extends TestCase {
 				array(
 					array(
 						'user' => 7,
-						'key'  => 'telegram_auth_sub',
+						'key'  => 'telegram_signin_sub',
 					),
 					array(
 						'user' => 7,
-						'key'  => 'telegram_auth_picture_url',
+						'key'  => 'telegram_signin_picture_url',
 					),
 					array(
 						'user' => 7,
@@ -324,7 +324,7 @@ final class Login_Handler_Test extends TestCase {
 		);
 		Functions\when( 'get_option' )->alias(
 			static fn( string $key, $default = false ) => match ( $key ) {
-				'telegram_auth_settings' => array( 'email_mode' => 'placeholder' ),
+				'telegram_signin_settings' => array( 'email_mode' => 'placeholder' ),
 				'default_role'           => 'subscriber',
 				default                  => $default,
 			}
@@ -358,7 +358,7 @@ final class Login_Handler_Test extends TestCase {
 		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
 		Functions\when( 'get_option' )->alias(
 			static fn( string $key, $default = false ) => match ( $key ) {
-				'telegram_auth_settings' => array( 'email_mode' => 'none' ),
+				'telegram_signin_settings' => array( 'email_mode' => 'none' ),
 				'default_role'           => 'subscriber',
 				default                  => $default,
 			}
@@ -393,7 +393,7 @@ final class Login_Handler_Test extends TestCase {
 		$captured_user = null;
 		Functions\when( 'update_user_meta' )->alias(
 			function ( int $user_id, string $key, $value ) use ( &$captured_sub, &$captured_user ) {
-				if ( 'telegram_auth_sub' === $key ) {
+				if ( 'telegram_signin_sub' === $key ) {
 					$captured_user = $user_id;
 					$captured_sub  = $value;
 				}
@@ -428,7 +428,7 @@ final class Login_Handler_Test extends TestCase {
 		$captured_picture = null;
 		Functions\when( 'update_user_meta' )->alias(
 			function ( int $user_id, string $key, $value ) use ( &$captured_picture ) {
-				if ( 'telegram_auth_picture_url' === $key ) {
+				if ( 'telegram_signin_picture_url' === $key ) {
 					$captured_picture = $value;
 				}
 				return true;
@@ -449,7 +449,7 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( 'https://t.me/i/userpic/x.jpg', $captured_picture );
 	}
 
-	public function test_resolve_user_creating_new_user_writes_telegram_auth_phone_when_phone_number_claim_present(): void {
+	public function test_resolve_user_creating_new_user_writes_telegram_signin_phone_when_phone_number_claim_present(): void {
 		Functions\when( 'get_users' )->justReturn( array() );
 		Functions\when( 'username_exists' )->justReturn( false );
 		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
@@ -516,7 +516,7 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertNotContains( Login_Handler::USERMETA_PHONE, $added_keys );
 	}
 
-	public function test_resolve_user_existing_user_writes_telegram_auth_phone_with_unique_flag(): void {
+	public function test_resolve_user_existing_user_writes_telegram_signin_phone_with_unique_flag(): void {
 		$existing     = new \WP_User();
 		$existing->ID = 7; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
 
@@ -614,7 +614,7 @@ final class Login_Handler_Test extends TestCase {
 			$this->make_handler()->handle( array( 'error' => 'access_denied' ) );
 			$this->fail( 'Expected Redirect_Captured.' );
 		} catch ( Redirect_Captured $r ) {
-			$this->assertStringContainsString( 'telegram_auth_error=cancelled', $r->url );
+			$this->assertStringContainsString( 'telegram_signin_error=cancelled', $r->url );
 		}
 	}
 
@@ -623,7 +623,7 @@ final class Login_Handler_Test extends TestCase {
 			$this->make_handler()->handle( array( 'state' => 'something' ) );
 			$this->fail( 'Expected Redirect_Captured.' );
 		} catch ( Redirect_Captured $r ) {
-			$this->assertStringContainsString( 'telegram_auth_error=token_invalid', $r->url );
+			$this->assertStringContainsString( 'telegram_signin_error=token_invalid', $r->url );
 		}
 	}
 
@@ -642,7 +642,7 @@ final class Login_Handler_Test extends TestCase {
 			);
 			$this->fail( 'Expected Redirect_Captured.' );
 		} catch ( Redirect_Captured $r ) {
-			$this->assertStringContainsString( 'telegram_auth_error=state_invalid', $r->url );
+			$this->assertStringContainsString( 'telegram_signin_error=state_invalid', $r->url );
 		}
 	}
 }

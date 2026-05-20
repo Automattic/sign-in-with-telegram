@@ -1,7 +1,7 @@
 import { diff, errorMessage, preserveConstants } from '../settings-app';
-import type { SettingsMeta, TelegramAuthSettings } from '../types';
+import type { SettingsMeta, TelegramSigninSettings } from '../types';
 
-const baseline: TelegramAuthSettings = {
+const baseline: TelegramSigninSettings = {
 	client_id: '8675309',
 	client_secret: 'shh',
 	default_role: 'subscriber',
@@ -20,7 +20,7 @@ describe('diff', () => {
 	});
 
 	it('includes only the changed primitive fields', () => {
-		const next: TelegramAuthSettings = {
+		const next: TelegramSigninSettings = {
 			...baseline,
 			button_label: 'Sign in',
 			request_phone: true,
@@ -42,12 +42,12 @@ describe('preserveConstants', () => {
 	});
 
 	it('passes saved values through when nothing is constant-pinned', () => {
-		const saved: TelegramAuthSettings = {
+		const saved: TelegramSigninSettings = {
 			...baseline,
 			client_id: 'db-id',
 			client_secret: 'db-secret',
 		};
-		const previous: TelegramAuthSettings = {
+		const previous: TelegramSigninSettings = {
 			...baseline,
 			client_id: 'db-id',
 			client_secret: 'db-secret',
@@ -58,12 +58,12 @@ describe('preserveConstants', () => {
 	});
 
 	it('carries the previous client_id forward when the source is constant', () => {
-		const saved: TelegramAuthSettings = {
+		const saved: TelegramSigninSettings = {
 			...baseline,
 			client_id: '',
 			button_label: 'updated',
 		};
-		const previous: TelegramAuthSettings = {
+		const previous: TelegramSigninSettings = {
 			...baseline,
 			client_id: 'constant-value',
 		};
@@ -73,11 +73,11 @@ describe('preserveConstants', () => {
 	});
 
 	it('carries the previous client_secret forward when the source is constant', () => {
-		const saved: TelegramAuthSettings = {
+		const saved: TelegramSigninSettings = {
 			...baseline,
 			client_secret: '',
 		};
-		const previous: TelegramAuthSettings = {
+		const previous: TelegramSigninSettings = {
 			...baseline,
 			client_secret: 'constant-secret',
 		};
@@ -86,12 +86,12 @@ describe('preserveConstants', () => {
 	});
 
 	it('preserves both credentials when both sources are constant', () => {
-		const saved: TelegramAuthSettings = {
+		const saved: TelegramSigninSettings = {
 			...baseline,
 			client_id: '',
 			client_secret: '',
 		};
-		const previous: TelegramAuthSettings = {
+		const previous: TelegramSigninSettings = {
 			...baseline,
 			client_id: 'pinned-id',
 			client_secret: 'pinned-secret',
