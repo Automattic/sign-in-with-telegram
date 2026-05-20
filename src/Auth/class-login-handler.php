@@ -58,6 +58,11 @@ class Login_Handler {
 	public const USERMETA_PICTURE_URL = 'telegram_auth_picture_url';
 
 	/**
+	 * Usermeta key storing the Telegram-verified phone number.
+	 */
+	public const USERMETA_PHONE = 'telegram_auth_phone';
+
+	/**
 	 * Build the handler.
 	 *
 	 * @param Settings         $settings         Plugin settings (credentials + redirect URI).
@@ -295,6 +300,7 @@ class Login_Handler {
 	public function unlink( int $user_id ): void {
 		delete_user_meta( $user_id, self::USERMETA_SUB );
 		delete_user_meta( $user_id, self::USERMETA_PICTURE_URL );
+		delete_user_meta( $user_id, self::USERMETA_PHONE );
 		delete_user_meta( $user_id, Scopes::USERMETA_GRANTED_SCOPES );
 
 		do_action(
@@ -365,7 +371,7 @@ class Login_Handler {
 	}
 
 	/**
-	 * Save Telegram's phone_number claim to billing_phone, but only if the user doesn't already have a value there.
+	 * Save the Telegram-verified `phone_number` claim into our own `telegram_auth_phone` usermeta.
 	 *
 	 * @param int                 $user_id Target user id.
 	 * @param array<string,mixed> $claims  Validated id_token claims.
@@ -375,7 +381,7 @@ class Login_Handler {
 		if ( '' === $phone ) {
 			return;
 		}
-		add_user_meta( $user_id, 'billing_phone', $phone, true );
+		add_user_meta( $user_id, self::USERMETA_PHONE, $phone, true );
 	}
 
 	/**

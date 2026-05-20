@@ -269,12 +269,15 @@ final class Login_Handler_Test extends TestCase {
 					),
 					array(
 						'user' => 7,
+						'key'  => Login_Handler::USERMETA_PHONE,
+					),
+					array(
+						'user' => 7,
 						'key'  => Scopes::USERMETA_GRANTED_SCOPES,
 					),
 				),
 				$deleted
 			);
-			$this->assertNotContains( 'billing_phone', array_column( $deleted, 'key' ) );
 		}
 
 	public function test_resolve_user_rejects_missing_sub(): void {
@@ -422,7 +425,7 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( 'https://t.me/i/userpic/x.jpg', $captured_picture );
 	}
 
-	public function test_resolve_user_creating_new_user_writes_billing_phone_when_phone_number_claim_present(): void {
+	public function test_resolve_user_creating_new_user_writes_telegram_auth_phone_when_phone_number_claim_present(): void {
 		Functions\when( 'get_users' )->justReturn( array() );
 		Functions\when( 'username_exists' )->justReturn( false );
 		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
@@ -450,13 +453,15 @@ final class Login_Handler_Test extends TestCase {
 
 		$this->make_handler()->resolve_user( $claims, self::consumed() );
 
-		// `$unique = true` is what makes add_user_meta refuse to overwrite
-		// an existing billing_phone — that's what we're asserting here, not
-		// just the value being written.
+		/*
+		 * `$unique = true` is what preserves the existing verified value
+		 * on re-sign-in — that's what we're asserting here, not just the
+		 * value being written.
+		 */
 		$this->assertContains(
 			array(
 				'user_id' => 101,
-				'key'     => 'billing_phone',
+				'key'     => Login_Handler::USERMETA_PHONE,
 				'value'   => '+15551234567',
 				'unique'  => true,
 			),
@@ -464,7 +469,7 @@ final class Login_Handler_Test extends TestCase {
 		);
 	}
 
-	public function test_resolve_user_creating_new_user_does_not_write_billing_phone_when_phone_number_claim_absent(): void {
+	public function test_resolve_user_creating_new_user_does_not_write_phone_when_phone_number_claim_absent(): void {
 		Functions\when( 'get_users' )->justReturn( array() );
 		Functions\when( 'username_exists' )->justReturn( false );
 		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
@@ -474,20 +479,20 @@ final class Login_Handler_Test extends TestCase {
 		$created->ID = 102; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
 		Functions\when( 'get_user_by' )->justReturn( $created );
 
-		$written_keys = array();
-		Functions\when( 'update_user_meta' )->alias(
-			function ( int $user_id, string $key, $value ) use ( &$written_keys ) {
-				$written_keys[] = $key;
-				return true;
+		$added_keys = array();
+		Functions\when( 'add_user_meta' )->alias(
+			function ( int $user_id, string $key, $value, bool $unique = false ) use ( &$added_keys ) {
+				$added_keys[] = $key;
+				return 1;
 			}
 		);
 
 		$this->make_handler()->resolve_user( self::valid_claims(), self::consumed() );
 
-		$this->assertNotContains( 'billing_phone', $written_keys );
+		$this->assertNotContains( Login_Handler::USERMETA_PHONE, $added_keys );
 	}
 
-	public function test_resolve_user_existing_user_backfills_billing_phone_with_unique_flag(): void {
+	public function test_resolve_user_existing_user_writes_telegram_auth_phone_with_unique_flag(): void {
 		$existing     = new \WP_User();
 		$existing->ID = 7; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
 
@@ -511,14 +516,15 @@ final class Login_Handler_Test extends TestCase {
 
 		$this->make_handler()->resolve_user( $claims, self::consumed() );
 
-		// We always *attempt* the write so first-time-after-link gets a
-		// billing_phone populated. `$unique = true` is what makes WP
-		// refuse the write when the user already has a value (set by
-		// WooCommerce, BuddyPress, themes, or the user themselves).
+		/*
+		 * Always *attempt* the write so a Telegram-verified phone lands
+		 * on the user the first time after linking. `$unique = true`
+		 * keeps a prior verified value intact on subsequent sign-ins.
+		 */
 		$this->assertContains(
 			array(
 				'user_id' => 7,
-				'key'     => 'billing_phone',
+				'key'     => Login_Handler::USERMETA_PHONE,
 				'value'   => '+15551234567',
 				'unique'  => true,
 			),

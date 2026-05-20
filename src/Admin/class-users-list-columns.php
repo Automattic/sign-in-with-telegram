@@ -9,6 +9,9 @@ declare(strict_types=1);
 
 namespace Telegram_Auth\Admin;
 
+use Telegram_Auth\Auth\Login_Handler;
+use Telegram_Auth\Auth\Phone;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -19,12 +22,12 @@ class Users_List_Columns {
 	/**
 	 * Column key and usermeta key for the stored phone number.
 	 */
-	private const PHONE_KEY = 'billing_phone';
+	private const PHONE_KEY = Login_Handler::USERMETA_PHONE;
 
 	/**
 	 * Named meta query clause used for sorting.
 	 */
-	private const PHONE_META_CLAUSE = 'telegram_auth_billing_phone';
+	private const PHONE_META_CLAUSE = 'telegram_auth_phone_sort';
 
 	/**
 	 * Runtime settings reader.
@@ -101,7 +104,7 @@ class Users_List_Columns {
 			return $output;
 		}
 
-		$phone = (string) get_user_meta( $user_id, self::PHONE_KEY, true );
+		$phone = Phone::for_user( $user_id );
 		if ( '' === $phone ) {
 			return '';
 		}

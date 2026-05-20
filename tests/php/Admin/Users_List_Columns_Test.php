@@ -14,6 +14,7 @@ use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
 use Telegram_Auth\Admin\Settings;
 use Telegram_Auth\Admin\Users_List_Columns;
+use Telegram_Auth\Auth\Login_Handler;
 
 /**
  * Brain Monkey-stubbed coverage for the wp-admin users list phone column.
@@ -79,21 +80,24 @@ final class Users_List_Columns_Test extends TestCase {
 				'username',
 				'name',
 				'email',
-				'billing_phone',
+				Login_Handler::USERMETA_PHONE,
 				'role',
 			),
 			array_keys( $columns )
 		);
-		$this->assertSame( 'Phone', $columns['billing_phone'] );
+		$this->assertSame( 'Phone', $columns[ Login_Handler::USERMETA_PHONE ] );
 	}
 
 	public function test_render_phone_column_returns_escaped_usermeta(): void {
 		Functions\expect( 'get_user_meta' )
 			->once()
-			->with( 123, 'billing_phone', true )
+			->with( 123, Login_Handler::USERMETA_PHONE, true )
 			->andReturn( '+1 <555> & 0123' );
+		Functions\when( 'apply_filters' )->alias(
+			static fn( string $name, $value, ...$args ) => $value
+		);
 
-		$output = $this->columns( true )->render_phone_column( '', 'billing_phone', 123 );
+		$output = $this->columns( true )->render_phone_column( '', Login_Handler::USERMETA_PHONE, 123 );
 
 		$this->assertSame( '+1 &lt;555&gt; &amp; 0123', $output );
 	}
@@ -101,10 +105,13 @@ final class Users_List_Columns_Test extends TestCase {
 	public function test_render_phone_column_returns_empty_string_when_phone_is_missing(): void {
 		Functions\expect( 'get_user_meta' )
 			->once()
-			->with( 123, 'billing_phone', true )
+			->with( 123, Login_Handler::USERMETA_PHONE, true )
 			->andReturn( '' );
+		Functions\when( 'apply_filters' )->alias(
+			static fn( string $name, $value, ...$args ) => $value
+		);
 
-		$output = $this->columns( true )->render_phone_column( 'ignored', 'billing_phone', 123 );
+		$output = $this->columns( true )->render_phone_column( 'ignored', Login_Handler::USERMETA_PHONE, 123 );
 
 		$this->assertSame( '', $output );
 	}
@@ -124,29 +131,29 @@ final class Users_List_Columns_Test extends TestCase {
 			)
 		);
 
-		$this->assertSame( 'billing_phone', $columns['billing_phone'] );
+		$this->assertSame( Login_Handler::USERMETA_PHONE, $columns[ Login_Handler::USERMETA_PHONE ] );
 	}
 
 	public function test_maybe_sort_by_phone_translates_orderby_to_usermeta_sort(): void {
 		$args = $this->columns( true )->maybe_sort_by_phone(
 			array(
-				'orderby' => 'billing_phone',
+				'orderby' => Login_Handler::USERMETA_PHONE,
 				'order'   => 'ASC',
 			)
 		);
 
 		$this->assertSame(
 			array(
-				'orderby'    => 'telegram_auth_billing_phone',
+				'orderby'    => 'telegram_auth_phone_sort',
 				'order'      => 'ASC',
 				'meta_query' => array(
-					'relation'                    => 'OR',
-					'telegram_auth_billing_phone' => array(
-						'key'     => 'billing_phone',
+					'relation'                 => 'OR',
+					'telegram_auth_phone_sort' => array(
+						'key'     => Login_Handler::USERMETA_PHONE,
 						'compare' => 'EXISTS',
 					),
-					'telegram_auth_no_phone'      => array(
-						'key'     => 'billing_phone',
+					'telegram_auth_no_phone'   => array(
+						'key'     => Login_Handler::USERMETA_PHONE,
 						'compare' => 'NOT EXISTS',
 					),
 				),
