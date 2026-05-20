@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9ec3c594de85c06d5769511e8f826aaf",
+    "content-hash": "d56280d9953f4c14cebd574dffeb686a",
     "packages": [
         {
             "name": "automattic/jetpack-autoloader",
@@ -72,16 +72,16 @@
         },
         {
             "name": "automattic/jetpack-wp-build-polyfills",
-            "version": "v0.1.6",
+            "version": "v0.1.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Automattic/jetpack-wp-build-polyfills.git",
-                "reference": "a81182123a52dd4db943cf9d84377abf3be4cdc9"
+                "reference": "5bbc9bb14c06115bfeeeb90931be0c61612cae64"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Automattic/jetpack-wp-build-polyfills/zipball/a81182123a52dd4db943cf9d84377abf3be4cdc9",
-                "reference": "a81182123a52dd4db943cf9d84377abf3be4cdc9",
+                "url": "https://api.github.com/repos/Automattic/jetpack-wp-build-polyfills/zipball/5bbc9bb14c06115bfeeeb90931be0c61612cae64",
+                "reference": "5bbc9bb14c06115bfeeeb90931be0c61612cae64",
                 "shasum": ""
             },
             "require": {
@@ -115,9 +115,9 @@
             ],
             "description": "Polyfills for WordPress Core packages not available in WP < 7.0",
             "support": {
-                "source": "https://github.com/Automattic/jetpack-wp-build-polyfills/tree/v0.1.6"
+                "source": "https://github.com/Automattic/jetpack-wp-build-polyfills/tree/v0.1.8"
             },
-            "time": "2026-05-04T16:18:34+00:00"
+            "time": "2026-05-14T15:41:18+00:00"
         },
         {
             "name": "firebase/php-jwt",

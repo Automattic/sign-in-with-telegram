@@ -29,6 +29,7 @@ describe('buildFields', () => {
 			'request_dm',
 			'button_label',
 			'post_login_redirect',
+			'clean_uninstall',
 		]);
 	});
 

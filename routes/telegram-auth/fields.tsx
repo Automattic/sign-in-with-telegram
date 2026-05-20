@@ -143,7 +143,7 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 				label,
 			})),
 			description: __(
-				'Telegram does not supply an email claim. Choose how to handle the missing value when creating new accounts.',
+				'Telegram does not share an email address. "No email" leaves the field blank — the user has to add one themselves before they can use password recovery. "Placeholder email" fills in an unreachable address like tg_user@users.noreply.example.com so the account looks complete to WordPress, but any recovery emails sent there will bounce.',
 				'telegram-auth'
 			),
 		},
@@ -183,6 +183,15 @@ export function buildFields(meta: SettingsMeta): Field<TelegramAuthSettings>[] {
 				'telegram-auth'
 			),
 		},
+		{
+			id: 'clean_uninstall',
+			label: __('Delete plugin data when uninstalled', 'telegram-auth'),
+			type: 'boolean',
+			description: __(
+				'When this plugin is uninstalled, remove all the settings and user data stored by it.',
+				'telegram-auth'
+			),
+		},
 	];
 }
 
@@ -219,6 +228,12 @@ export const form: Form = {
 			label: __('Sign-in button', 'telegram-auth'),
 			layout: { type: 'card', withHeader: true, isCollapsible: false },
 			children: ['button_label', 'post_login_redirect'],
+		},
+		{
+			id: 'section-uninstall',
+			label: __('Data clean up', 'telegram-auth'),
+			layout: { type: 'card', withHeader: true, isCollapsible: false },
+			children: ['clean_uninstall'],
 		},
 	],
 };

@@ -198,6 +198,7 @@ final class Personal_Data_Test extends TestCase {
 					static fn( string $content ): bool => str_contains( $content, 'Telegram OpenID Connect' )
 						&& str_contains( $content, 'Telegram account identifier' )
 						&& str_contains( $content, 'Telegram profile photo URL' )
+						&& str_contains( $content, 'placeholder email mode' )
 						&& str_contains( $content, 'Phone number access and bot DM access' )
 				)
 			);

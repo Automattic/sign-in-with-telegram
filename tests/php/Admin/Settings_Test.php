@@ -171,6 +171,7 @@ final class Settings_Test extends TestCase {
 				'request_dm',
 				'button_label',
 				'post_login_redirect',
+				'clean_uninstall',
 			),
 			array_keys( $defaults )
 		);
@@ -183,6 +184,7 @@ final class Settings_Test extends TestCase {
 		$this->assertFalse( $defaults['request_dm'] );
 		$this->assertSame( 'Sign in with Telegram', $defaults['button_label'] );
 		$this->assertSame( '', $defaults['post_login_redirect'] );
+		$this->assertFalse( $defaults['clean_uninstall'] );
 	}
 
 	public function test_sanitize_coerces_and_bounds_values(): void {
@@ -226,6 +228,64 @@ final class Settings_Test extends TestCase {
 
 		$this->assertSame( 'placeholder', $sanitized['email_mode'] );
 		$this->assertSame( '', $sanitized['post_login_redirect'] );
+	}
+
+	public function test_get_button_label_falls_back_to_default_when_unset(): void {
+		$settings = new Settings();
+
+		$this->assertSame( 'Sign in with Telegram', $settings->get_button_label() );
+	}
+
+	public function test_get_button_label_returns_stored_value(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'button_label' => 'Continue with Telegram' );
+
+		$this->assertSame( 'Continue with Telegram', $settings->get_button_label() );
+	}
+
+	public function test_get_button_label_falls_back_to_default_when_whitespace_only(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'button_label' => '   ' );
+
+		$this->assertSame( 'Sign in with Telegram', $settings->get_button_label() );
+	}
+
+	public function test_get_email_mode_defaults_to_none(): void {
+		$settings = new Settings();
+
+		$this->assertSame( 'none', $settings->get_email_mode() );
+	}
+
+	public function test_get_email_mode_accepts_placeholder(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'email_mode' => 'placeholder' );
+
+		$this->assertSame( 'placeholder', $settings->get_email_mode() );
+	}
+
+	public function test_get_email_mode_falls_back_to_none_on_bogus_value(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'email_mode' => 'nope' );
+
+		$this->assertSame( 'none', $settings->get_email_mode() );
+	}
+
+	public function test_get_post_login_redirect_returns_empty_by_default(): void {
+		$settings = new Settings();
+
+		$this->assertSame( '', $settings->get_post_login_redirect() );
+	}
+
+	public function test_get_post_login_redirect_returns_stored_value(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'post_login_redirect' => 'https://example.test/welcome' );
+
+		$this->assertSame( 'https://example.test/welcome', $settings->get_post_login_redirect() );
 	}
 
 	public function test_scope_accessors_read_sanitized_settings(): void {
@@ -478,6 +538,24 @@ final class Settings_Test extends TestCase {
 		$this->settings_option        = array( 'client_secret' => 'stored-secret' );
 
 		$this->assertSame( 'constant', $settings->get_client_secret_source() );
+	}
+
+	public function test_clean_uninstall_defaults_to_false(): void {
+		$this->assertFalse( ( new Settings() )->clean_uninstall() );
+	}
+
+	public function test_clean_uninstall_reads_stored_truthy_value(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'clean_uninstall' => '1' );
+
+		$this->assertTrue( ( new Settings() )->clean_uninstall() );
+	}
+
+	public function test_clean_uninstall_reads_stored_falsy_value(): void {
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'clean_uninstall' => '0' );
+
+		$this->assertFalse( ( new Settings() )->clean_uninstall() );
 	}
 
 	public function test_register_hooks_the_settings_api_registration(): void {

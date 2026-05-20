@@ -40,6 +40,21 @@ final class Login_Button_Block_Test extends TestCase {
 		Functions\when( 'esc_attr' )->returnArg();
 		Functions\when( 'sanitize_text_field' )->returnArg();
 		Functions\when( 'get_block_wrapper_attributes' )->justReturn( 'class="wp-block-telegram-auth-login-button"' );
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_auth_settings' => array(
+					'client_id'     => '12345',
+					'client_secret' => 'secret',
+				),
+				'default_role'           => 'subscriber',
+				default                  => $default,
+			}
+		);
+		Functions\when( 'wp_roles' )->justReturn(
+			(object) array(
+				'roles' => array( 'subscriber' => array( 'name' => 'Subscriber' ) ),
+			)
+		);
 	}
 
 	protected function tearDown(): void {
@@ -48,7 +63,8 @@ final class Login_Button_Block_Test extends TestCase {
 	}
 
 	private function block(): Login_Button_Block {
-		return new Login_Button_Block( new Login_Button( new Settings() ) );
+		$settings = new Settings();
+		return new Login_Button_Block( new Login_Button( $settings ), $settings );
 	}
 
 	public function test_render_uses_default_label_when_attribute_is_blank(): void {

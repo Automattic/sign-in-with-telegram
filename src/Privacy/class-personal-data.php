@@ -181,6 +181,7 @@ class Personal_Data {
 	public function register_policy_content(): void {
 		$content  = '<p>' . esc_html__( 'Telegram Auth lets visitors sign in to this site with their Telegram account using Telegram OpenID Connect.', 'telegram-auth' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'When a user connects Telegram, the plugin stores a stable Telegram account identifier and may store a Telegram profile photo URL when Telegram supplies one. If optional access is granted, the plugin may also store the user\'s Telegram phone number and the Telegram scopes granted during sign-in.', 'telegram-auth' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'If placeholder email mode is enabled, the plugin may generate a non-routable WordPress account email address from the Telegram account identifier.', 'telegram-auth' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'Phone number access and bot DM access are requested only when those options are enabled in the Telegram Auth settings.', 'telegram-auth' ) . '</p>';
 
 		wp_add_privacy_policy_content( __( 'Telegram Auth', 'telegram-auth' ), $content );
