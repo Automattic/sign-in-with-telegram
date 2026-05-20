@@ -18,6 +18,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
+defined( 'TELEGRAM_AUTH_PLUGIN_FILE' ) || define( 'TELEGRAM_AUTH_PLUGIN_FILE', __FILE__ );
+
 /**
  * Plugin entry point. Loads the Composer autoloader and the build registry,
  * then bootstraps the plugin. If either dependency hasn't been installed yet
