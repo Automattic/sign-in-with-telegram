@@ -100,9 +100,10 @@ final class Personal_Data_Test extends TestCase {
 
 	public function test_exporter_returns_configured_values_for_matching_user(): void {
 		$this->meta = array(
-			Login_Handler::USERMETA_SUB      => 'telegram-sub-123',
-			'billing_phone'                  => '+15551234567',
-			Scopes::USERMETA_GRANTED_SCOPES  => array( 'phone', 'telegram:bot_access' ),
+			Login_Handler::USERMETA_SUB         => 'telegram-sub-123',
+			Login_Handler::USERMETA_PICTURE_URL => 'https://t.me/i/userpic/photo.jpg',
+			'billing_phone'                     => '+15551234567',
+			Scopes::USERMETA_GRANTED_SCOPES     => array( 'phone', 'telegram:bot_access' ),
 		);
 
 		$response = ( new Personal_Data() )->export_personal_data( self::USER_EMAIL );
@@ -118,6 +119,7 @@ final class Personal_Data_Test extends TestCase {
 		$items = array_column( $group['data'], 'value', 'name' );
 		$this->assertSame( 'telegram-sub-123', $items['Telegram account identifier'] );
 		$this->assertSame( '+15551234567', $items['Phone number'] );
+		$this->assertSame( 'https://t.me/i/userpic/photo.jpg', $items['Telegram profile photo URL'] );
 		$this->assertSame( 'phone, telegram:bot_access', $items['Granted Telegram scopes'] );
 	}
 
@@ -154,6 +156,7 @@ final class Personal_Data_Test extends TestCase {
 		$this->assertSame(
 			array(
 				array( 123, Login_Handler::USERMETA_SUB ),
+				array( 123, Login_Handler::USERMETA_PICTURE_URL ),
 				array( 123, 'billing_phone' ),
 				array( 123, Scopes::USERMETA_GRANTED_SCOPES ),
 			),
@@ -194,6 +197,7 @@ final class Personal_Data_Test extends TestCase {
 				\Mockery::on(
 					static fn( string $content ): bool => str_contains( $content, 'Telegram OpenID Connect' )
 						&& str_contains( $content, 'Telegram account identifier' )
+						&& str_contains( $content, 'Telegram profile photo URL' )
 						&& str_contains( $content, 'Phone number access and bot DM access' )
 				)
 			);
