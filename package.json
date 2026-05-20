@@ -1,14 +1,14 @@
 {
-	"name": "telegram-auth",
+	"name": "sign-in-with-telegram",
 	"version": "0.1.0",
 	"description": "Let your visitors sign in to WordPress with their Telegram account.",
 	"private": true,
 	"license": "GPL-2.0-or-later",
 	"author": "Automattic",
-	"homepage": "https://github.com/Automattic/telegram-auth",
+	"homepage": "https://github.com/Automattic/sign-in-with-telegram",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Automattic/telegram-auth.git"
+		"url": "git+https://github.com/Automattic/sign-in-with-telegram.git"
 	},
 	"scripts": {
 		"build": "wp-build && node bin/postbuild-shim-boot.cjs",
@@ -59,11 +59,11 @@
 	},
 	"prettier": "@wordpress/prettier-config",
 	"wpPlugin": {
-		"name": "telegram_auth",
-		"scriptGlobal": "telegramAuth",
-		"packageNamespace": "telegram-auth",
+		"name": "telegram_signin",
+		"scriptGlobal": "telegramSignin",
+		"packageNamespace": "sign-in-with-telegram",
 		"pages": [
-			"telegram-auth"
+			"sign-in-with-telegram"
 		]
 	}
 }

@@ -2,7 +2,7 @@
 /**
  * Silence is golden.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 defined( 'ABSPATH' ) || exit;

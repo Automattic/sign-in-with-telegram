@@ -1,9 +1,9 @@
 {
-    "name": "automattic/telegram-auth",
+    "name": "automattic/sign-in-with-telegram",
     "description": "Let your visitors sign in to WordPress with their Telegram account.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
-    "homepage": "https://github.com/Automattic/telegram-auth",
+    "homepage": "https://github.com/Automattic/sign-in-with-telegram",
     "require": {
         "php": ">=8.1",
         "automattic/jetpack-autoloader": "^5.0",

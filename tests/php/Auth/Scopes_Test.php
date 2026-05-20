@@ -1,18 +1,18 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Auth\Scopes.
+ * Unit tests for Automattic\Telegram\SignIn\Scopes.
  *
- * @package Telegram_Auth\Tests\Auth
+ * @package Automattic\Telegram\SignIn\Tests\Auth
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\Auth;
+namespace Automattic\Telegram\SignIn\Tests\Auth;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Auth\Scopes;
+use Automattic\Telegram\SignIn\Scopes;
 
 /**
  * Brain Monkey-stubbed coverage of granted optional scope helpers.
@@ -64,6 +64,6 @@ final class Scopes_Test extends TestCase {
 		);
 
 		$this->assertTrue( Scopes::can_dm( 42 ) );
-		$this->assertSame( array( 'telegram_auth_can_dm', false, 42, array() ), $seen );
+		$this->assertSame( array( 'telegram_signin_can_dm', false, 42, array() ), $seen );
 	}
 }

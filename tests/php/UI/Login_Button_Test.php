@@ -1,19 +1,19 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\UI\Login_Button.
+ * Unit tests for Automattic\Telegram\SignIn\Login_Button.
  *
- * @package Telegram_Auth\Tests\UI
+ * @package Automattic\Telegram\SignIn\Tests\UI
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\UI;
+namespace Automattic\Telegram\SignIn\Tests\UI;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\UI\Login_Button;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Login_Button;
 
 /**
  * Coverage for the shortcode markup, login_form auto-injection toggle, and
@@ -47,7 +47,7 @@ final class Login_Button_Test extends TestCase {
 		);
 		Functions\when( 'get_option' )->alias(
 			static fn( string $key, $default = false ) => match ( $key ) {
-				'telegram_auth_settings' => array(
+				'telegram_signin_settings' => array(
 					'client_id'     => '12345',
 					'client_secret' => 'secret',
 				),
@@ -74,15 +74,15 @@ final class Login_Button_Test extends TestCase {
 	public function test_get_start_url_carries_action_and_nonce(): void {
 		$url = $this->button()->get_start_url();
 
-		$this->assertStringContainsString( 'action=telegram_auth_start', $url );
+		$this->assertStringContainsString( 'action=telegram_signin_start', $url );
 		$this->assertStringContainsString( '_wpnonce=nonce-fixture', $url );
-		$this->assertStringNotContainsString( 'telegram_auth_redirect_to', $url );
+		$this->assertStringNotContainsString( 'telegram_signin_redirect_to', $url );
 	}
 
 	public function test_get_start_url_appends_redirect_to_when_provided(): void {
 		$url = $this->button()->get_start_url( 'https://example.test/welcome/' );
 
-		$this->assertStringContainsString( 'telegram_auth_redirect_to=', $url );
+		$this->assertStringContainsString( 'telegram_signin_redirect_to=', $url );
 		$this->assertStringContainsString( rawurlencode( 'https://example.test/welcome/' ), $url );
 	}
 
@@ -90,7 +90,7 @@ final class Login_Button_Test extends TestCase {
 		$html = $this->button()->render_shortcode( array() );
 
 		$this->assertStringContainsString( '<a href="https://example.test/wp-login.php?', $html );
-		$this->assertStringContainsString( 'class="button button-secondary telegram-auth-login-button"', $html );
+		$this->assertStringContainsString( 'class="button button-secondary sign-in-with-telegram-login-button"', $html );
 		$this->assertStringContainsString( '<svg', $html );
 		$this->assertStringContainsString( 'Sign in with Telegram', $html );
 		$this->assertStringContainsString( 'aria-label="Sign in with Telegram"', $html );
@@ -106,12 +106,12 @@ final class Login_Button_Test extends TestCase {
 	public function test_render_shortcode_appends_redirect_to_when_attr_set(): void {
 		$html = $this->button()->render_shortcode( array( 'redirect_to' => 'https://example.test/me' ) );
 
-		$this->assertStringContainsString( 'telegram_auth_redirect_to', $html );
+		$this->assertStringContainsString( 'telegram_signin_redirect_to', $html );
 	}
 
 	public function test_render_on_login_form_prints_when_filter_returns_true(): void {
 		Functions\when( 'apply_filters' )->alias(
-			static fn( string $name, $value ) => 'telegram_auth_show_on_login_form' === $name ? true : $value
+			static fn( string $name, $value ) => 'telegram_signin_show_on_login_form' === $name ? true : $value
 		);
 
 		ob_start();
@@ -124,7 +124,7 @@ final class Login_Button_Test extends TestCase {
 
 	public function test_render_on_login_form_suppresses_when_filter_returns_false(): void {
 		Functions\when( 'apply_filters' )->alias(
-			static fn( string $name, $value ) => 'telegram_auth_show_on_login_form' === $name ? false : $value
+			static fn( string $name, $value ) => 'telegram_signin_show_on_login_form' === $name ? false : $value
 		);
 
 		ob_start();

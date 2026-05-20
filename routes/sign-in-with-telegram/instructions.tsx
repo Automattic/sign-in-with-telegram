@@ -21,26 +21,26 @@ export function Instructions({
 	initialOpen,
 }: InstructionsProps): JSX.Element {
 	return (
-		<Panel className="telegram-auth-instructions">
+		<Panel className="sign-in-with-telegram-instructions">
 			<PanelBody
 				title={__(
 					'Instructions (Connect your Telegram bot)',
-					'telegram-auth'
+					'sign-in-with-telegram'
 				)}
 				initialOpen={initialOpen}
 			>
-				<p className="telegram-auth-instructions-intro">
+				<p className="sign-in-with-telegram-instructions-intro">
 					{__(
-						'Telegram Auth signs visitors in through your bot using Telegram’s OpenID Connect login. To wire it up, register two URLs with @BotFather and copy back the credentials it gives you.',
-						'telegram-auth'
+						'Sign in with Telegram signs visitors in through your bot using Telegram’s OpenID Connect login. To wire it up, register two URLs with @BotFather and copy back the credentials it gives you.',
+						'sign-in-with-telegram'
 					)}
 				</p>
-				<ol className="telegram-auth-instructions-steps">
+				<ol className="sign-in-with-telegram-instructions-steps">
 					<li>
 						{createInterpolateElement(
 							__(
 								'Open <BotFather /> in Telegram and launch its mini app from the attachment menu, beside the text input.',
-								'telegram-auth'
+								'sign-in-with-telegram'
 							),
 							{
 								BotFather: (
@@ -55,7 +55,7 @@ export function Instructions({
 						{createInterpolateElement(
 							__(
 								'Pick your bot under <strong>My bots</strong>, then open <strong>Login widget</strong>. If your bot is still on the legacy widget, choose <strong>Switch to OpenID Connect Login</strong> and confirm.',
-								'telegram-auth'
+								'sign-in-with-telegram'
 							),
 							{ strong: <strong /> }
 						)}
@@ -64,7 +64,7 @@ export function Instructions({
 						{createInterpolateElement(
 							__(
 								'Add this URL under <strong>Redirect URIs</strong>:',
-								'telegram-auth'
+								'sign-in-with-telegram'
 							),
 							{ strong: <strong /> }
 						)}
@@ -74,7 +74,7 @@ export function Instructions({
 						{createInterpolateElement(
 							__(
 								'Add this URL under <strong>Trusted Origins</strong>:',
-								'telegram-auth'
+								'sign-in-with-telegram'
 							),
 							{ strong: <strong /> }
 						)}
@@ -84,7 +84,7 @@ export function Instructions({
 						{createInterpolateElement(
 							__(
 								'Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> BotFather shows you, and paste them into the fields below. The Client Secret is not the bot token — they are different values.',
-								'telegram-auth'
+								'sign-in-with-telegram'
 							),
 							{ strong: <strong /> }
 						)}
@@ -112,17 +112,19 @@ function CopyableValue({ value }: { value: string }): JSX.Element {
 	};
 
 	return (
-		<div className="telegram-auth-copyable">
-			<code className="telegram-auth-copyable-value">{value}</code>
+		<div className="sign-in-with-telegram-copyable">
+			<code className="sign-in-with-telegram-copyable-value">
+				{value}
+			</code>
 			<Button
-				className="telegram-auth-copyable-button"
+				className="sign-in-with-telegram-copyable-button"
 				variant="secondary"
 				size="compact"
 				onClick={onCopy}
 			>
 				{copied
-					? __('Copied', 'telegram-auth')
-					: __('Copy', 'telegram-auth')}
+					? __('Copied', 'sign-in-with-telegram')
+					: __('Copy', 'sign-in-with-telegram')}
 			</Button>
 		</div>
 	);

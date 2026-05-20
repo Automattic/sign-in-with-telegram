@@ -2,12 +2,12 @@
 /**
  * Public surface of a transaction that has just been consumed.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Auth;
+namespace Automattic\Telegram\SignIn;
 
 defined( 'ABSPATH' ) || exit;
 

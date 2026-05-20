@@ -2,14 +2,14 @@
 /**
  * Plugin settings schema and reader.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Admin;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\OIDC\Config;
+use Automattic\Telegram\SignIn\Config;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -23,17 +23,17 @@ class Settings {
 	/**
 	 * Single option row backing the plugin settings.
 	 */
-	public const OPTION_KEY = 'telegram_auth_settings';
+	public const OPTION_KEY = 'telegram_signin_settings';
 
 	/**
 	 * Constant name for the OIDC client id (Telegram bot's numeric id).
 	 */
-	public const CLIENT_ID_CONSTANT = 'TELEGRAM_AUTH_CLIENT_ID';
+	public const CLIENT_ID_CONSTANT = 'TELEGRAM_SIGNIN_CLIENT_ID';
 
 	/**
 	 * Constant name for the OIDC client secret (BotFather Web Login).
 	 */
-	public const CLIENT_SECRET_CONSTANT = 'TELEGRAM_AUTH_CLIENT_SECRET';
+	public const CLIENT_SECRET_CONSTANT = 'TELEGRAM_SIGNIN_CLIENT_SECRET';
 
 	/**
 	 * Valid modes for handling Telegram's missing email claim.
@@ -92,7 +92,7 @@ class Settings {
 		}
 
 		register_setting(
-			'telegram_auth',
+			'telegram_signin',
 			self::OPTION_KEY,
 			array(
 				'type'              => 'object',
@@ -377,7 +377,7 @@ class Settings {
 	public function get_button_label(): string {
 		$value = trim( (string) $this->get_setting_value( 'button_label' ) );
 		return '' === $value
-			? __( 'Sign in with Telegram', 'telegram-auth' )
+			? __( 'Sign in with Telegram', 'sign-in-with-telegram' )
 			: $value;
 	}
 
@@ -452,7 +452,7 @@ class Settings {
 		return new Config(
 			client_id:     $client_id,
 			client_secret: $client_secret,
-			redirect_uri:  add_query_arg( 'action', 'telegram_auth_callback', wp_login_url() ),
+			redirect_uri:  add_query_arg( 'action', 'telegram_signin_callback', wp_login_url() ),
 		);
 	}
 

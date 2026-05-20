@@ -2,15 +2,15 @@
 /**
  * Renders auth-pipeline failures as login-page redirects + login_errors notices.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Http;
+namespace Automattic\Telegram\SignIn;
 
-use Telegram_Auth\Auth\Transaction_Exception;
-use Telegram_Auth\OIDC\OIDC_Exception;
+use Automattic\Telegram\SignIn\Transaction_Exception;
+use Automattic\Telegram\SignIn\OIDC_Exception;
 use WP_Error;
 
 defined( 'ABSPATH' ) || exit;
@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Two responsibilities:
  *  1. From a thrown exception or a `WP_Error`, redirect the user to
- *     `wp-login.php?telegram_auth_error=<code>` (so the public-facing error
+ *     `wp-login.php?telegram_signin_error=<code>` (so the public-facing error
  *     surface stays generic and consistent) and exit.
  *  2. When the login page renders with that query param present, inject a
  *     translated message into `wp_login_errors` so the user sees something
@@ -32,7 +32,7 @@ class Failure_Renderer {
 	 * Plugin-prefixed to avoid colliding with anything else that happens to
 	 * touch `wp-login.php` (Telegram's own widget plugin, custom themes, etc.).
 	 */
-	public const ERROR_QUERY_PARAM = 'telegram_auth_error';
+	public const ERROR_QUERY_PARAM = 'telegram_signin_error';
 
 	/**
 	 * Maximum length of the failure-code value we'll accept from the URL.
@@ -115,7 +115,7 @@ class Failure_Renderer {
 		}
 
 		$message = $this->message_for_code( $raw );
-		$errors->add( 'telegram_auth_' . $raw, $message, 'error' );
+		$errors->add( 'telegram_signin_' . $raw, $message, 'error' );
 		return $errors;
 	}
 
@@ -132,18 +132,18 @@ class Failure_Renderer {
 	 */
 	private function message_for_code( string $code ): string {
 		return match ( $code ) {
-			Transaction_Exception::STATE_INVALID => __( 'Login session was invalid or has already been used. Please try again.', 'telegram-auth' ),
-			Transaction_Exception::STATE_EXPIRED => __( 'Your sign-in link timed out. Please try again.', 'telegram-auth' ),
-			OIDC_Exception::PROVIDER_UNREACHABLE => __( 'Telegram could not be reached. Please try again.', 'telegram-auth' ),
-			OIDC_Exception::TOKEN_INVALID        => __( 'Telegram returned an invalid response. Please try again.', 'telegram-auth' ),
-			OIDC_Exception::DISCOVERY_INVALID    => __( 'Telegram returned an unexpected configuration. Please contact the site administrator.', 'telegram-auth' ),
-			OIDC_Exception::CLOCK_SKEW           => __( 'Your sign-in attempt and our server are out of sync. Please check your device clock and try again.', 'telegram-auth' ),
-			'cancelled'                          => __( 'Sign-in was canceled.', 'telegram-auth' ),
-			'not_configured'                     => __( 'Telegram sign-in is not yet configured. Please contact the site administrator.', 'telegram-auth' ),
-			'wrong_intent'                       => __( 'That link can only be used while signed in.', 'telegram-auth' ),
-			'already_linked'                     => __( 'That Telegram account is already linked to a different user on this site.', 'telegram-auth' ),
-			'signup_disabled'                    => __( 'New account creation is disabled. Sign in with an existing account first to link Telegram.', 'telegram-auth' ),
-			default                              => __( 'Something went wrong with Telegram sign-in. Please try again.', 'telegram-auth' ),
+			Transaction_Exception::STATE_INVALID => __( 'Login session was invalid or has already been used. Please try again.', 'sign-in-with-telegram' ),
+			Transaction_Exception::STATE_EXPIRED => __( 'Your sign-in link timed out. Please try again.', 'sign-in-with-telegram' ),
+			OIDC_Exception::PROVIDER_UNREACHABLE => __( 'Telegram could not be reached. Please try again.', 'sign-in-with-telegram' ),
+			OIDC_Exception::TOKEN_INVALID        => __( 'Telegram returned an invalid response. Please try again.', 'sign-in-with-telegram' ),
+			OIDC_Exception::DISCOVERY_INVALID    => __( 'Telegram returned an unexpected configuration. Please contact the site administrator.', 'sign-in-with-telegram' ),
+			OIDC_Exception::CLOCK_SKEW           => __( 'Your sign-in attempt and our server are out of sync. Please check your device clock and try again.', 'sign-in-with-telegram' ),
+			'cancelled'                          => __( 'Sign-in was canceled.', 'sign-in-with-telegram' ),
+			'not_configured'                     => __( 'Telegram sign-in is not yet configured. Please contact the site administrator.', 'sign-in-with-telegram' ),
+			'wrong_intent'                       => __( 'That link can only be used while signed in.', 'sign-in-with-telegram' ),
+			'already_linked'                     => __( 'That Telegram account is already linked to a different user on this site.', 'sign-in-with-telegram' ),
+			'signup_disabled'                    => __( 'New account creation is disabled. Sign in with an existing account first to link Telegram.', 'sign-in-with-telegram' ),
+			default                              => __( 'Something went wrong with Telegram sign-in. Please try again.', 'sign-in-with-telegram' ),
 		};
 	}
 }

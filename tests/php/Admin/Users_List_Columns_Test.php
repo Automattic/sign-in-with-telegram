@@ -1,20 +1,20 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Admin\Users_List_Columns.
+ * Unit tests for Automattic\Telegram\SignIn\Users_List_Columns.
  *
- * @package Telegram_Auth\Tests\Admin
+ * @package Automattic\Telegram\SignIn\Tests\Admin
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\Admin;
+namespace Automattic\Telegram\SignIn\Tests\Admin;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Admin\Settings;
-use Telegram_Auth\Admin\Users_List_Columns;
-use Telegram_Auth\Auth\Login_Handler;
+use Automattic\Telegram\SignIn\Settings;
+use Automattic\Telegram\SignIn\Users_List_Columns;
+use Automattic\Telegram\SignIn\Login_Handler;
 
 /**
  * Brain Monkey-stubbed coverage for the wp-admin users list phone column.
@@ -144,15 +144,15 @@ final class Users_List_Columns_Test extends TestCase {
 
 		$this->assertSame(
 			array(
-				'orderby'    => 'telegram_auth_phone_sort',
+				'orderby'    => 'telegram_signin_phone_sort',
 				'order'      => 'ASC',
 				'meta_query' => array(
 					'relation'                 => 'OR',
-					'telegram_auth_phone_sort' => array(
+					'telegram_signin_phone_sort' => array(
 						'key'     => Login_Handler::USERMETA_PHONE,
 						'compare' => 'EXISTS',
 					),
-					'telegram_auth_no_phone'   => array(
+					'telegram_signin_no_phone'   => array(
 						'key'     => Login_Handler::USERMETA_PHONE,
 						'compare' => 'NOT EXISTS',
 					),

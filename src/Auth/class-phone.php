@@ -2,12 +2,12 @@
 /**
  * Read accessor for the Telegram-verified phone number stored on a user.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Auth;
+namespace Automattic\Telegram\SignIn;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -37,6 +37,6 @@ final class Phone {
 		 * @param string $phone   The stored Telegram-verified phone, or '' when none.
 		 * @param int    $user_id Target user id.
 		 */
-		return (string) apply_filters( 'telegram_auth_phone', $stored, $user_id );
+		return (string) apply_filters( 'telegram_signin_phone', $stored, $user_id );
 	}
 }

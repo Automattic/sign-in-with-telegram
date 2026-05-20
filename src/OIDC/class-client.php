@@ -2,12 +2,12 @@
 /**
  * Thin OIDC client tailored to Telegram's profile.
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\OIDC;
+namespace Automattic\Telegram\SignIn;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -33,12 +33,12 @@ class Client {
 	/**
 	 * Transient key for the cached OIDC discovery document.
 	 */
-	public const DISCOVERY_TRANSIENT = 'telegram_auth_oidc_discovery';
+	public const DISCOVERY_TRANSIENT = 'telegram_signin_oidc_discovery';
 
 	/**
 	 * Transient key for the cached JWKS document.
 	 */
-	public const JWKS_TRANSIENT = 'telegram_auth_jwks';
+	public const JWKS_TRANSIENT = 'telegram_signin_jwks';
 
 	/**
 	 * Cache TTL (in seconds) for both the discovery document and the JWKS.
@@ -104,7 +104,7 @@ class Client {
 				throw new OIDC_Exception(
 					sprintf(
 						/* translators: %s: name of the missing OIDC discovery field, e.g. "jwks_uri". */
-						esc_html__( 'OIDC discovery document missing or invalid "%s".', 'telegram-auth' ),
+						esc_html__( 'OIDC discovery document missing or invalid "%s".', 'sign-in-with-telegram' ),
 						esc_html( $field )
 					),
 					OIDC_Exception::DISCOVERY_INVALID
@@ -187,7 +187,7 @@ class Client {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: %s: WP_Error message returned by the HTTP transport. */
-					esc_html__( 'Failed to exchange authorization code: %s', 'telegram-auth' ),
+					esc_html__( 'Failed to exchange authorization code: %s', 'sign-in-with-telegram' ),
 					esc_html( $response->get_error_message() )
 				),
 				OIDC_Exception::PROVIDER_UNREACHABLE
@@ -201,7 +201,7 @@ class Client {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: %d: HTTP status code returned by the OIDC token endpoint. */
-					esc_html__( 'Token endpoint returned HTTP %d.', 'telegram-auth' ),
+					esc_html__( 'Token endpoint returned HTTP %d.', 'sign-in-with-telegram' ),
 					(int) $status
 				),
 				OIDC_Exception::TOKEN_INVALID
@@ -211,7 +211,7 @@ class Client {
 		$decoded = json_decode( $body, true );
 		if ( ! is_array( $decoded ) ) {
 			throw new OIDC_Exception(
-				esc_html__( 'Token response was not valid JSON.', 'telegram-auth' ),
+				esc_html__( 'Token response was not valid JSON.', 'sign-in-with-telegram' ),
 				OIDC_Exception::TOKEN_INVALID
 			);
 		}
@@ -277,7 +277,7 @@ class Client {
 
 		if ( ! isset( $jwks['keys'] ) || ! is_array( $jwks['keys'] ) ) {
 			throw new OIDC_Exception(
-				esc_html__( 'JWKS document missing or invalid "keys" array.', 'telegram-auth' ),
+				esc_html__( 'JWKS document missing or invalid "keys" array.', 'sign-in-with-telegram' ),
 				OIDC_Exception::PROVIDER_UNREACHABLE
 			);
 		}
@@ -302,7 +302,7 @@ class Client {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: 1: URL the GET request targeted. 2: WP_Error message. */
-					esc_html__( 'GET %1$s failed: %2$s', 'telegram-auth' ),
+					esc_html__( 'GET %1$s failed: %2$s', 'sign-in-with-telegram' ),
 					esc_html( $url ),
 					esc_html( $response->get_error_message() )
 				),
@@ -315,7 +315,7 @@ class Client {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: 1: URL the GET request targeted. 2: HTTP status code returned. */
-					esc_html__( 'GET %1$s returned HTTP %2$d.', 'telegram-auth' ),
+					esc_html__( 'GET %1$s returned HTTP %2$d.', 'sign-in-with-telegram' ),
 					esc_html( $url ),
 					(int) $status
 				),
@@ -329,7 +329,7 @@ class Client {
 			throw new OIDC_Exception(
 				sprintf(
 					/* translators: %s: URL whose response body could not be parsed as JSON. */
-					esc_html__( 'Response from %s was not valid JSON.', 'telegram-auth' ),
+					esc_html__( 'Response from %s was not valid JSON.', 'sign-in-with-telegram' ),
 					esc_html( $url )
 				),
 				$failure_code

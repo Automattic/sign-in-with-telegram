@@ -4,7 +4,7 @@ Operational knowledge for AI agents and contributors working on this repo. Read 
 
 ## Project at a glance
 
-A WordPress plugin (`telegram-auth`) that lets visitors sign in to WordPress with their Telegram account, using Telegram's OpenID Connect login. Built for the wp.org plugin repository. Repo: <https://github.com/Automattic/telegram-auth>. Default branch: `trunk` (not `main`).
+A WordPress plugin (`sign-in-with-telegram`) that lets visitors sign in to WordPress with their Telegram account, using Telegram's OpenID Connect login. Built for the wp.org plugin repository. Repo: <https://github.com/Automattic/sign-in-with-telegram>. Default branch: `trunk` (not `main`).
 
 Stack:
 
@@ -16,8 +16,8 @@ Stack:
 ## Repository layout
 
 ```
-telegram-auth/
-  telegram-auth.php          # Plugin bootstrap (header, ABSPATH guard, autoload + build/build.php loader, calls Bootstrap::init()).
+sign-in-with-telegram/
+  sign-in-with-telegram.php          # Plugin bootstrap (header, ABSPATH guard, autoload + build/build.php loader, calls Bootstrap::init()).
   uninstall.php              # WP_UNINSTALL_PLUGIN guard only; real cleanup lands later.
   readme.txt                 # wp.org-format readme.
   README.md                  # GitHub-facing readme (local dev quickstart).
@@ -29,15 +29,15 @@ telegram-auth/
   phpunit.xml.dist           # Strict; bootstraps Composer autoload.
   tsconfig.json              # ES2022, strict, jsx: react-jsx, jsxImportSource: react.
   .wp-env.json               # Latest WP, PHP 8.1, plugin + Gutenberg + Query Monitor mounted.
-  .wp-env.override.json      # GITIGNORED — local bot creds (TELEGRAM_AUTH_CLIENT_ID/SECRET).
+  .wp-env.override.json      # GITIGNORED — local bot creds (TELEGRAM_SIGNIN_CLIENT_ID/SECRET).
   .npmrc                     # install-strategy=linked.
   .editorconfig
   .gitignore                 # Ignores build/, vendor/, node_modules/, .wp-env/, /temp/, .wp-env.override.json, .vscode/* outliers, etc.
   src/
-    class-bootstrap.php      # Telegram_Auth\Bootstrap — registers Settings → submenu + WP Build polyfill.
+    class-bootstrap.php      # Automattic\Telegram\SignIn\Bootstrap — registers Settings → submenu + WP Build polyfill.
   routes/                    # wp-build's file-based router (one dir per route).
-    telegram-auth/
-      package.json           # { route: { path: '/', page: 'telegram-auth' } }
+    sign-in-with-telegram/
+      package.json           # { route: { path: '/', page: 'sign-in-with-telegram' } }
       stage.tsx              # React content for the route.
   bin/
     postbuild-shim-boot.cjs  # CRITICAL — see "wp-build pages gotcha" below.
@@ -59,7 +59,7 @@ npm run env:start          # Docker-backed WP stack on http://localhost:8888 (ad
 npm run dev                # wp-build watch mode in another terminal.
 ```
 
-**Bot credentials**: create `.wp-env.override.json` (gitignored) at repo root with the OIDC credentials BotFather's mini app produces (open [@BotFather](https://t.me/BotFather), launch the mini app from the attachment menu, pick the bot under **My bots → Login widget**, and switch to OpenID Connect if the bot is still on the legacy widget). Example shape lives in [README.md](README.md). The values become real PHP constants (`TELEGRAM_AUTH_CLIENT_ID`, `TELEGRAM_AUTH_CLIENT_SECRET`) inside the container via wp-env's `config` block. Restart the stack (`npm run env:reset`) after editing the override.
+**Bot credentials**: create `.wp-env.override.json` (gitignored) at repo root with the OIDC credentials BotFather's mini app produces (open [@BotFather](https://t.me/BotFather), launch the mini app from the attachment menu, pick the bot under **My bots → Login widget**, and switch to OpenID Connect if the bot is still on the legacy widget). Example shape lives in [README.md](README.md). The values become real PHP constants (`TELEGRAM_SIGNIN_CLIENT_ID`, `TELEGRAM_SIGNIN_CLIENT_SECRET`) inside the container via wp-env's `config` block. Restart the stack (`npm run env:reset`) after editing the override.
 
 **Companion scripts**:
 
@@ -84,33 +84,33 @@ npm run build
 
 ### Bootstrap
 
-`telegram-auth.php` is a thin entry: ABSPATH guard, friendly admin notice when `vendor/autoload.php` or `build/build.php` are missing, then `\Telegram_Auth\Bootstrap::init()`.
+`sign-in-with-telegram.php` is a thin entry: ABSPATH guard, friendly admin notice when `vendor/autoload.php` or `build/build.php` are missing, then `\Automattic\Telegram\SignIn\Bootstrap::init()`.
 
-`Telegram_Auth\Bootstrap` (`src/class-bootstrap.php`):
+`Automattic\Telegram\SignIn\Bootstrap` (`src/class-bootstrap.php`):
 
 - `has_runtime()` — returns true when `get_bloginfo('version') >= 7.0` OR the Gutenberg plugin is in `active_plugins`. The wp-build-generated page templates depend on `@wordpress/boot` which only ships with Core 7+/Gutenberg, so the menu is gated on this.
-- `register_menu()` — `add_submenu_page('options-general.php', …, 'telegram-auth-wp-admin', $callback)` on the `admin_menu` hook. Renders the **wp-admin-mode** page (integrated into standard wp-admin layout — vs. the full-page mode that takes over the screen with its own sidebar).
+- `register_menu()` — `add_submenu_page('options-general.php', …, 'sign-in-with-telegram-wp-admin', $callback)` on the `admin_menu` hook. Renders the **wp-admin-mode** page (integrated into standard wp-admin layout — vs. the full-page mode that takes over the screen with its own sidebar).
 - `maybe_show_dependency_notice()` — admin notice when `has_runtime()` is false.
 
-The render callback we hand to `add_submenu_page` is `telegram_auth_telegram_auth_wp_admin_render_page`. wp-build generates that name as `<wpPlugin.name>_<page-id-with-underscores>_wp_admin_render_page`. The prefix duplication (`telegram_auth_telegram_auth_…`) is unavoidable — wp-build doesn't decouple the page id from the function-name suffix.
+The render callback we hand to `add_submenu_page` is `telegram_signin_telegram_signin_wp_admin_render_page`. wp-build generates that name as `<wpPlugin.name>_<page-id-with-underscores>_wp_admin_render_page`. The prefix duplication (`telegram_signin_telegram_signin_…`) is unavoidable — wp-build doesn't decouple the page id from the function-name suffix.
 
 ### Settings page architecture
 
 We use wp-build's **experimental** `wpPlugin.pages` feature:
 
-- `package.json` declares `wpPlugin.pages: [ "telegram-auth" ]`.
-- wp-build generates `build/pages/telegram-auth/page.php` (full-page mode) and `page-wp-admin.php` (wp-admin mode). We register `add_submenu_page` against the wp-admin-mode callback only.
+- `package.json` declares `wpPlugin.pages: [ "sign-in-with-telegram" ]`.
+- wp-build generates `build/pages/sign-in-with-telegram/page.php` (full-page mode) and `page-wp-admin.php` (wp-admin mode). We register `add_submenu_page` against the wp-admin-mode callback only.
 - The page mounts a React app rendered by `@wordpress/boot` (provided by Gutenberg or WP 7+).
 - Routes live under `routes/`, each in its own directory with a `package.json` describing `{ route: { path: '/', page: '<page-id>' } }` and a `stage.tsx` (required), plus optional `inspector.tsx`, `canvas.tsx`, `route.tsx` files. wp-build builds these into `build/routes/<name>/content.{js,min.js}` + asset.php.
-- On page load, wp-build's generated `page-wp-admin.php` registers a "prerequisites" classic script (handle: `telegram-auth-wp-admin-prerequisites`) with the script handles needed before the inline `import("@wordpress/boot")` resolves, then enqueues the page's loader script-module which has the route content modules as dynamic deps.
+- On page load, wp-build's generated `page-wp-admin.php` registers a "prerequisites" classic script (handle: `sign-in-with-telegram-wp-admin-prerequisites`) with the script handles needed before the inline `import("@wordpress/boot")` resolves, then enqueues the page's loader script-module which has the route content modules as dynamic deps.
 
 ### Auth flow (planned, not yet implemented)
 
 The OIDC auth flow follows Telegram's [bots/telegram-login](https://core.telegram.org/bots/telegram-login) spec:
 
-- `wp-login.php?action=telegram_auth_start` → builds an authorize URL with PKCE/state/nonce, redirects to Telegram.
-- `wp-login.php?action=telegram_auth_callback` → exchanges code for `id_token`, validates against Telegram's JWKS (RS256, kid-aware), maps `sub` claim to a WP user, calls `wp_set_auth_cookie`.
-- `wp-login.php?action=telegram_auth_link` → same flow but for logged-in users connecting an existing WP account; nonce-protected.
+- `wp-login.php?action=telegram_signin_start` → builds an authorize URL with PKCE/state/nonce, redirects to Telegram.
+- `wp-login.php?action=telegram_signin_callback` → exchanges code for `id_token`, validates against Telegram's JWKS (RS256, kid-aware), maps `sub` claim to a WP user, calls `wp_set_auth_cookie`.
+- `wp-login.php?action=telegram_signin_link` → same flow but for logged-in users connecting an existing WP account; nonce-protected.
 
 **No** `admin-post.php` is used — many membership/LMS/security plugins gate `/wp-admin/` for non-admin users, breaking linking for subscribers. The entire auth path lives on `wp-login.php` for compatibility.
 
@@ -134,15 +134,15 @@ The OIDC auth flow follows Telegram's [bots/telegram-login](https://core.telegra
 | OIDC client           | Hand-rolled (~150 LOC)                           | `jumbojett/openid-connect-php` defaults to `$_SESSION` (no-go in WP) and calls `userinfo` implicitly (Telegram has none). `web-token/jwt-framework` is too heavy. `league/oauth2-client` plus firebase/php-jwt buys ~80 LOC at the cost of a Guzzle/PSR-7 dep tree — not worth it. |
 | Build tool            | `@wordpress/build` (`wp-build`)                  | Per the project's stated requirement. Pinned to `0.13.0`; package is young and ships breaking changes regularly.                                                                                                                                                                   |
 | Lint stack            | ESLint 9 (NOT 10), `@wordpress/eslint-plugin` 25 | ESLint 10 is blocked upstream by `@wordpress/eslint-plugin → @babel/eslint-parser` peer-depending on eslint 7-9.                                                                                                                                                                   |
-| Phone number storage  | Plain text in `telegram_auth_phone` usermeta     | Plugin-owned key preserves the "verified by Telegram" guarantee — only the plugin ever writes it, on a verified id_token.                                                                                                                                                          |
+| Phone number storage  | Plain text in `telegram_signin_phone` usermeta     | Plugin-owned key preserves the "verified by Telegram" guarantee — only the plugin ever writes it, on a verified id_token.                                                                                                                                                          |
 
 ## Coding conventions
 
 ### PHP
 
 - WPCS (`WordPress` ruleset) — **no sniff exclusions**. Class files follow `class-foo-bar.php` for class `Foo_Bar`; class names are snake_case (e.g. `OIDC_Exception`, not `OIDCException`, because WPCS would otherwise expect `class-o-i-d-c-exception.php`). Composer uses classmap autoload (not PSR-4), so adding a new class requires `composer dump-autoload`.
-- Global prefix: `telegram_auth_` (or `Telegram_Auth\` for namespaced PHP, `TELEGRAM_AUTH_` for constants).
-- Text domain: `telegram-auth`.
+- Global prefix: `telegram_signin_` (or `Automattic\Telegram\SignIn\` for namespaced PHP, `TELEGRAM_SIGNIN_` for constants).
+- Text domain: `sign-in-with-telegram`.
 - VS Code's PHPCS extensions don't always read `phpcs.xml.dist` cleanly. `composer phpcs` is the truth source. `.vscode/settings.json` configures the obliviousharmony extension to point at our ruleset, but extension-loading quirks can still cause spurious diagnostics — trust the CLI.
 
 ### TypeScript / JavaScript
@@ -153,10 +153,10 @@ The OIDC auth flow follows Telegram's [bots/telegram-login](https://core.telegra
 
 ### Query parameter naming
 
-All plugin-owned query params use the `telegram_auth_` prefix:
+All plugin-owned query params use the `telegram_signin_` prefix:
 
-- `telegram_auth_error=<code>` for failure-code redirects to `wp-login.php`.
-- `telegram_auth_redirect_to=<url>` for the link flow's custom post-link redirect.
+- `telegram_signin_error=<code>` for failure-code redirects to `wp-login.php`.
+- `telegram_signin_redirect_to=<url>` for the link flow's custom post-link redirect.
 - WP-standard params (`_wpnonce`, `redirect_to` as consumed natively by `wp-login.php`) keep their core names.
 
 ## Known gotchas (the actual hard-won knowledge)
@@ -178,7 +178,7 @@ All plugin-owned query params use the `telegram_auth_` prefix:
 - `<prefix>_<slug>_render_page` — **full-page mode**. Hooks `admin_init`, calls `exit()` after rendering its own `<html><body>`. Replaces the entire admin chrome with a custom sidebar. For editor-like apps.
 - `<prefix>_<slug>_wp_admin_render_page` — **wp-admin mode**. Hooks `admin_enqueue_scripts` against `?page=<slug>-wp-admin`. Renders into a mount div inside the standard wp-admin layout. For settings pages.
 
-We use wp-admin mode. The menu slug must include the `-wp-admin` suffix (`telegram-auth-wp-admin`) so `page-wp-admin.php`'s URL matcher fires.
+We use wp-admin mode. The menu slug must include the `-wp-admin` suffix (`sign-in-with-telegram-wp-admin`) so `page-wp-admin.php`'s URL matcher fires.
 
 ### 3. wp-env doesn't accept raw PHP expressions in `config`
 
@@ -203,7 +203,7 @@ Trigger: `pull_request` and `push` to `trunk`.
 
 ## Deploying
 
-Not yet wired. Plan: `10up/action-wordpress-plugin-deploy@stable` triggered on `v*.*.*` tags, with `slug: telegram-auth`, `assets-dir: .wordpress-org`, `generate-zip: true`. `.distignore` will exclude tests/, packages/\*/src, lint configs, source maps, and the gitignored planning artifacts.
+Not yet wired. Plan: `10up/action-wordpress-plugin-deploy@stable` triggered on `v*.*.*` tags, with `slug: sign-in-with-telegram`, `assets-dir: .wordpress-org`, `generate-zip: true`. `.distignore` will exclude tests/, packages/\*/src, lint configs, source maps, and the gitignored planning artifacts.
 
 ## Things to remember when changing course
 

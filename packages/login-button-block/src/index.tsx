@@ -1,15 +1,15 @@
 /**
  * Telegram Login Button block — editor-side registration.
  *
- * Built by wp-build as the script module `@telegram-auth/login-button-block`
+ * Built by wp-build as the script module `@sign-in-with-telegram/login-button-block`
  * and pulled in via block.json's `editorScriptModule`. The front-end markup
  * is server-rendered (Login_Button_Block::render) so the block, the
- * [telegram_auth_button] shortcode, and the wp-login.php auto-print share
+ * [telegram_signin_button] shortcode, and the wp-login.php auto-print share
  * identical HTML. Editor-side we only render a static placeholder + the
  * InspectorControls for the two attributes.
  *
  * Inherited defaults for the inspector inputs come from a
- * `window.telegramAuthBlockDefaults` global that PHP injects via the
+ * `window.telegramSigninBlockDefaults` global that PHP injects via the
  * `enqueue_block_editor_assets` hook — no REST round-trip, no
  * permission gotchas for non-admin editors.
  */
@@ -34,17 +34,17 @@ interface BlockDefaults {
 
 declare global {
 	interface Window {
-		telegramAuthBlockDefaults?: BlockDefaults;
+		telegramSigninBlockDefaults?: BlockDefaults;
 	}
 }
 
 function inheritedDefaults(): BlockDefaults {
-	return window.telegramAuthBlockDefaults ?? {};
+	return window.telegramSigninBlockDefaults ?? {};
 }
 
 const PaperPlaneIcon = () => (
 	<svg
-		className="telegram-auth-login-button__icon"
+		className="sign-in-with-telegram-login-button__icon"
 		width={20}
 		height={20}
 		viewBox="0 0 24 24"
@@ -65,7 +65,7 @@ const Edit = ({
 
 	const inheritedLabel =
 		inherited.buttonLabel?.trim() ||
-		__('Sign in with Telegram', 'telegram-auth');
+		__('Sign in with Telegram', 'sign-in-with-telegram');
 	const inheritedRedirect = inherited.postLoginRedirect ?? '';
 	const previewLabel = attributes.label || inheritedLabel;
 
@@ -73,16 +73,16 @@ const Edit = ({
 		<>
 			<InspectorControls>
 				<PanelBody
-					title={__('Telegram Auth', 'telegram-auth')}
+					title={__('Sign in with Telegram', 'sign-in-with-telegram')}
 					initialOpen
 				>
 					<TextControl
 						__next40pxDefaultSize
 						__nextHasNoMarginBottom
-						label={__('Button label', 'telegram-auth')}
+						label={__('Button label', 'sign-in-with-telegram')}
 						help={__(
-							'Leave blank to inherit the site-wide Telegram Auth setting.',
-							'telegram-auth'
+							'Leave blank to inherit the site-wide Sign in with Telegram setting.',
+							'sign-in-with-telegram'
 						)}
 						placeholder={inheritedLabel}
 						value={attributes.label}
@@ -93,10 +93,13 @@ const Edit = ({
 					<TextControl
 						__next40pxDefaultSize
 						__nextHasNoMarginBottom
-						label={__('Redirect after sign-in', 'telegram-auth')}
+						label={__(
+							'Redirect after sign-in',
+							'sign-in-with-telegram'
+						)}
 						help={__(
 							'Optional URL to send the user to after a successful login. Leave blank to inherit the site-wide setting.',
-							'telegram-auth'
+							'sign-in-with-telegram'
 						)}
 						placeholder={inheritedRedirect}
 						value={attributes.redirectTo}
@@ -108,11 +111,11 @@ const Edit = ({
 			</InspectorControls>
 			<div {...blockProps}>
 				<span
-					className="button button-secondary telegram-auth-login-button"
+					className="button button-secondary sign-in-with-telegram-login-button"
 					aria-disabled
 				>
 					<PaperPlaneIcon />{' '}
-					<span className="telegram-auth-login-button__label">
+					<span className="sign-in-with-telegram-login-button__label">
 						{previewLabel}
 					</span>
 				</span>

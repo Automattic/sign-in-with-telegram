@@ -1,20 +1,20 @@
 <?php
 /**
- * Unit tests for Telegram_Auth\Auth\Phone.
+ * Unit tests for Automattic\Telegram\SignIn\Phone.
  *
- * @package Telegram_Auth\Tests\Auth
+ * @package Automattic\Telegram\SignIn\Tests\Auth
  */
 
 declare(strict_types=1);
 
-namespace Telegram_Auth\Tests\Auth;
+namespace Automattic\Telegram\SignIn\Tests\Auth;
 
 use Brain\Monkey;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
-use Telegram_Auth\Auth\Login_Handler;
-use Telegram_Auth\Auth\Phone;
+use Automattic\Telegram\SignIn\Login_Handler;
+use Automattic\Telegram\SignIn\Phone;
 
 /**
  * Brain Monkey-stubbed coverage of the Phone read accessor + filter.
@@ -31,7 +31,7 @@ final class Phone_Test extends TestCase {
 		parent::tearDown();
 	}
 
-	public function test_for_user_returns_stored_telegram_auth_phone(): void {
+	public function test_for_user_returns_stored_telegram_signin_phone(): void {
 		$captured_key = null;
 		Functions\when( 'get_user_meta' )->alias(
 			function ( int $user_id, string $key, bool $single = false ) use ( &$captured_key ) {
@@ -56,10 +56,10 @@ final class Phone_Test extends TestCase {
 		$this->assertSame( '', Phone::for_user( 42 ) );
 	}
 
-	public function test_for_user_applies_telegram_auth_phone_filter(): void {
+	public function test_for_user_applies_telegram_signin_phone_filter(): void {
 		Functions\when( 'get_user_meta' )->justReturn( '' );
 
-		Filters\expectApplied( 'telegram_auth_phone' )
+		Filters\expectApplied( 'telegram_signin_phone' )
 			->once()
 			->with( '', 42 )
 			->andReturn( '+15550000000' );
@@ -70,7 +70,7 @@ final class Phone_Test extends TestCase {
 	public function test_for_user_passes_stored_value_through_filter(): void {
 		Functions\when( 'get_user_meta' )->justReturn( '+15551234567' );
 
-		Filters\expectApplied( 'telegram_auth_phone' )
+		Filters\expectApplied( 'telegram_signin_phone' )
 			->once()
 			->with( '+15551234567', 7 )
 			->andReturn( '+15551234567' );

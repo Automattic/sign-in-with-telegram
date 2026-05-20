@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name:       Telegram Auth
- * Plugin URI:        https://github.com/Automattic/telegram-auth
+ * Plugin Name:       Sign in with Telegram
+ * Plugin URI:        https://github.com/Automattic/sign-in-with-telegram
  * Description:       Let your visitors sign in to WordPress with their Telegram account.
  * Version:           0.1.0
  * Requires at least: 6.8
@@ -10,10 +10,10 @@
  * Author URI:        https://automattic.com/
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       telegram-auth
+ * Text Domain:       sign-in-with-telegram
  * Domain Path:       /languages
  *
- * @package Telegram_Auth
+ * @package Automattic\Telegram\SignIn
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -44,7 +44,7 @@ defined( 'ABSPATH' ) || exit;
 				}
 				printf(
 					'<div class="notice notice-error"><p>%s <code>%s</code></p></div>',
-					esc_html__( 'Telegram Auth is missing build artifacts. Run:', 'telegram-auth' ),
+					esc_html__( 'Sign in with Telegram is missing build artifacts. Run:', 'sign-in-with-telegram' ),
 					esc_html( implode( ' && ', $missing ) )
 				);
 			}
@@ -55,5 +55,5 @@ defined( 'ABSPATH' ) || exit;
 	require_once $plugin_dir . 'vendor/autoload_packages.php';
 	require_once $plugin_dir . 'build/build.php';
 
-	\Telegram_Auth\Bootstrap::init();
+	\Automattic\Telegram\SignIn\Bootstrap::init();
 } )();
