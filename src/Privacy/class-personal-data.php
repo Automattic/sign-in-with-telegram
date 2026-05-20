@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Telegram_Auth\Privacy;
 
 use Telegram_Auth\Auth\Login_Handler;
+use Telegram_Auth\Auth\Phone;
 use Telegram_Auth\Auth\Scopes;
 use WP_User;
 
@@ -24,11 +25,6 @@ class Personal_Data {
 	 * Export/erase group slug.
 	 */
 	private const GROUP_ID = 'telegram-auth';
-
-	/**
-	 * Usermeta key storing a user's phone number for WooCommerce/theme interop.
-	 */
-	private const USERMETA_BILLING_PHONE = 'billing_phone';
 
 	/**
 	 * Hook the service into Core privacy APIs.
@@ -105,7 +101,7 @@ class Personal_Data {
 			);
 		}
 
-		$phone = self::string_meta( $user->ID, self::USERMETA_BILLING_PHONE );
+		$phone = Phone::for_user( $user->ID );
 		if ( '' !== $phone ) {
 			$data[] = array(
 				'name'  => __( 'Phone number', 'telegram-auth' ),
@@ -257,7 +253,7 @@ class Personal_Data {
 		return array(
 			Login_Handler::USERMETA_SUB,
 			Login_Handler::USERMETA_PICTURE_URL,
-			self::USERMETA_BILLING_PHONE,
+			Login_Handler::USERMETA_PHONE,
 			Scopes::USERMETA_GRANTED_SCOPES,
 		);
 	}

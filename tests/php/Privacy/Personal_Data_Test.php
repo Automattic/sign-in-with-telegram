@@ -61,6 +61,9 @@ final class Personal_Data_Test extends TestCase {
 				return $this->meta[ $key ] ?? '';
 			}
 		);
+		Functions\when( 'apply_filters' )->alias(
+			static fn( string $name, $value, ...$args ) => $value
+		);
 	}
 
 	protected function tearDown(): void {
@@ -102,7 +105,7 @@ final class Personal_Data_Test extends TestCase {
 		$this->meta = array(
 			Login_Handler::USERMETA_SUB         => 'telegram-sub-123',
 			Login_Handler::USERMETA_PICTURE_URL => 'https://t.me/i/userpic/photo.jpg',
-			'billing_phone'                     => '+15551234567',
+			Login_Handler::USERMETA_PHONE       => '+15551234567',
 			Scopes::USERMETA_GRANTED_SCOPES     => array( 'phone', 'telegram:bot_access' ),
 		);
 
@@ -126,7 +129,7 @@ final class Personal_Data_Test extends TestCase {
 	public function test_exporter_omits_empty_values_cleanly(): void {
 		$this->meta = array(
 			Login_Handler::USERMETA_SUB      => 'telegram-sub-123',
-			'billing_phone'                  => '',
+			Login_Handler::USERMETA_PHONE    => '',
 			Scopes::USERMETA_GRANTED_SCOPES  => array(),
 		);
 
@@ -157,7 +160,7 @@ final class Personal_Data_Test extends TestCase {
 			array(
 				array( 123, Login_Handler::USERMETA_SUB ),
 				array( 123, Login_Handler::USERMETA_PICTURE_URL ),
-				array( 123, 'billing_phone' ),
+				array( 123, Login_Handler::USERMETA_PHONE ),
 				array( 123, Scopes::USERMETA_GRANTED_SCOPES ),
 			),
 			$deleted
