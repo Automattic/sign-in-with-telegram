@@ -1,19 +1,28 @@
 <?php
 /**
- * Uninstall handler.
+ * Uninstall handler. Invoked by WordPress when the plugin is deleted from
+ * the Plugins screen — not on deactivation. The file is only included by
+ * Core after `WP_UNINSTALL_PLUGIN` is set to the path of this plugin's main
+ * file, so the guards below both block direct-URL access and confirm we're
+ * being included for *our* uninstall rather than another plugin's.
+ *
+ * See https://developer.wordpress.org/plugins/the-basics/uninstall-methods/
  *
  * @package Telegram_Auth
  */
 
 declare(strict_types=1);
 
-if (
-	! defined( 'WP_UNINSTALL_PLUGIN' ) ||
-	! WP_UNINSTALL_PLUGIN ||
-	dirname( WP_UNINSTALL_PLUGIN ) !== dirname( plugin_basename( __FILE__ ) )
-) {
-		status_header( 404 );
-		exit( 0 );
+// Bail if uninstall.php is not being invoked by WordPress.
+if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+	exit;
+}
+
+// Defense in depth: confirm Core is calling *this* plugin's uninstall.
+// WP only includes one uninstall.php per delete operation, so this should
+// always match, but the wp.org plugin reviewer expects the explicit guard.
+if ( dirname( WP_UNINSTALL_PLUGIN ) !== dirname( plugin_basename( __FILE__ ) ) ) {
+	exit;
 }
 
 $telegram_auth_settings = get_option( 'telegram_auth_settings', array() );
