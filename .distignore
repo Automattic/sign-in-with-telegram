@@ -31,14 +31,18 @@
 # intermediate build outputs (build-module, build) are excluded further
 # down so only the source ships.
 #
-# `tests`, `test`, `docs`, `examples` are unanchored on purpose — vendor
-# packages routinely ship test fixtures (e.g. firebase/php-jwt's tests/)
-# that don't belong in the shipped plugin.
+# `tests`, `test`, `__tests__`, `__mocks__`, `docs`, `examples` are
+# unanchored on purpose — vendor packages routinely ship test
+# fixtures (e.g. firebase/php-jwt's tests/), and our own routes/
+# carries Jest spec files under __tests__/. None of that belongs in
+# the user-facing zip.
 /bin
 docs
 examples
 tests
 test
+__tests__
+__mocks__
 /temp
 /node_modules
 /vendor/bin
