@@ -127,26 +127,57 @@ class Bootstrap {
 		);
 		add_action( 'admin_menu', array( self::class, 'register_menu' ) );
 
+		/*
+		 * Inject the settings + meta the React app reads as
+		 * `window.telegramSigninData`. Rides as an inline script on
+		 * wp-build's prerequisites handle (registered by the
+		 * page-wp-admin render callback on `admin_enqueue_scripts`
+		 * priority 10) with position 'before' so the global is set
+		 * up before the boot module's import resolves. Priority 11
+		 * runs after wp-build has registered the handle.
+		 */
 		add_action(
-			'admin_print_scripts-settings_page_' . self::PAGE_SLUG,
-			static function () use ( $settings ): void {
-				$site_origin  = self::site_origin();
-				$redirect_uri = add_query_arg( 'action', 'telegram_signin_callback', wp_login_url() );
+			'admin_enqueue_scripts',
+			static function ( string $hook_suffix ) use ( $settings ): void {
+				self::maybe_print_settings_page_data( $hook_suffix, $settings );
+			},
+			11
+		);
+	}
 
-				$data = array(
-					'settings'     => $settings->get_all(),
-					'settingsMeta' => array(
-						'client_id_source'     => $settings->get_client_id_source(),
-						'client_secret_source' => $settings->get_client_secret_source(),
-					),
-					'siteOrigin'   => $site_origin,
-					'redirectUri'  => $redirect_uri,
-				);
-				printf(
-					'<script>window.telegramSigninData = %s;</script>',
-					wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode escapes appropriately for a script context.
-				);
-			}
+	/**
+	 * Attach `window.telegramSigninData` to wp-build's prerequisites handle
+	 * when the current admin page is the plugin's settings screen.
+	 *
+	 * Extracted out of the `admin_enqueue_scripts` closure so the gate
+	 * (hook-suffix match) and the wp_add_inline_script call shape (handle
+	 * name + 'before' position) are unit-testable.
+	 *
+	 * @param string   $hook_suffix Current admin screen's hook suffix.
+	 * @param Settings $settings    Runtime settings reader.
+	 */
+	public static function maybe_print_settings_page_data( string $hook_suffix, Settings $settings ): void {
+		if ( 'settings_page_' . self::PAGE_SLUG !== $hook_suffix ) {
+			return;
+		}
+
+		$site_origin  = self::site_origin();
+		$redirect_uri = add_query_arg( 'action', 'telegram_signin_callback', wp_login_url() );
+
+		$data = array(
+			'settings'     => $settings->get_all(),
+			'settingsMeta' => array(
+				'client_id_source'     => $settings->get_client_id_source(),
+				'client_secret_source' => $settings->get_client_secret_source(),
+			),
+			'siteOrigin'   => $site_origin,
+			'redirectUri'  => $redirect_uri,
+		);
+
+		wp_add_inline_script(
+			self::PAGE_SLUG . '-prerequisites',
+			'window.telegramSigninData = ' . wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE ) . ';',
+			'before'
 		);
 	}
 
