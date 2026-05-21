@@ -21,6 +21,7 @@
 /.npmrc
 /.nvmrc
 /.distignore
+/.dist
 
 # Source-only directories.
 #
