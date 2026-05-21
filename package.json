@@ -10,7 +10,25 @@
 		"type": "git",
 		"url": "git+https://github.com/Automattic/sign-in-with-telegram.git"
 	},
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": ">=24.15",
+			"onFail": "error"
+		},
+		"packageManager": {
+			"name": "npm",
+			"version": ">=11.12.1",
+			"onFail": "error"
+		}
+	},
 	"scripts": {
+		"setup": "composer install && npm install",
+		"check": "composer phpcs && composer phpunit && npm run lint:js && npm run lint:css && npm run typecheck && npm test && npm run build",
+		"setup:claude": "node bin/setup-agent.mts claude",
+		"setup:cursor": "node bin/setup-agent.mts cursor",
+		"setup:codex": "node bin/setup-agent.mts codex",
+		"setup:gemini": "node bin/setup-agent.mts gemini",
 		"build": "wp-build && node bin/postbuild-shim-boot.cjs",
 		"dev": "wp-build --watch",
 		"env:start": "wp-env start",

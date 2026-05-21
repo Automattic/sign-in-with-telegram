@@ -24,3 +24,8 @@ node_modules/
 *.swo
 
 /temp/
+
+# Per-agent slash-command shim directories. Populated by `npm run setup:<agent>`
+# from the canonical skill files at `.agents/commands/`.
+/.claude/commands/
+/.cursor/commands/

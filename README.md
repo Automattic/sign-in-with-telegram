@@ -166,7 +166,7 @@ npm run typecheck
 npm test
 ```
 
-See [`docs/contributing.md`](docs/contributing.md) for the full contributor workflow.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full contributor workflow, including commit / PR / branch conventions and the agent-skills setup.
 
 ## License
 

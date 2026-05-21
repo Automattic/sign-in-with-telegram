@@ -1,0 +1,47 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# Default-deny; the job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Lint PR title
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50  # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Mirrors the table in CONTRIBUTING.md.
+          types: |
+            feat
+            fix
+            chore
+            docs
+            refactor
+            test
+            perf
+            ci
+            build
+            style
+          requireScope: false
+          # Subject must start with a letter (no purely numeric leading subjects).
+          subjectPattern: '^[A-Za-z].*$'
+          subjectPatternError: |
+            The subject "{subject}" must start with a letter.
+            Example: `feat(auth): add account linking`.
+          # release-please opens PRs titled like `chore(main): release X.Y.Z` —
+          # `chore` is in the type allow-list, and `requireScope: false` means
+          # the `main` scope is accepted as-is. No special-casing needed.
+          wip: false
