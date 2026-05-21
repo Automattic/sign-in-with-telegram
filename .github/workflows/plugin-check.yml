@@ -41,9 +41,6 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Explicitly install npm
-        run: npm install -g npm@latest
-
       - name: Install npm dependencies
         run: npm ci
 

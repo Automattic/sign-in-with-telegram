@@ -6,17 +6,13 @@ This guide covers how to make contributions to `sign-in-with-telegram`. It's the
 
 Requirements:
 
-- **Node 24.15+** and **npm 11.15+**. Both are enforced by `package.json`'s `devEngines` block — running `npm install` against a lower version exits with an error.
+- **Node 24.15+** and **npm 11.12.1+**. Both are enforced by `package.json`'s `devEngines` block — running `npm install` against a lower version exits with an error.
 - **PHP 8.1+** and **Composer**.
 - **Docker** (for the local WordPress stack via `wp-env`).
 
 Bootstrap:
 
 ```bash
-# Node 24 ships with an older npm than this repo requires; upgrade first.
-npm install -g npm@latest
-
-# Then install everything.
 npm run setup    # composer install && npm install
 ```
 
@@ -26,12 +22,12 @@ If you use `nvm`, the repo's `.nvmrc` pins to `24.15` — run `nvm use` after cl
 
 Workflows are exposed two ways: as npm scripts (run with `npm run <name>`) and as slash-command skills (run via your AI agent's UI). The canonical skill content lives at `.agents/commands/*.md`; per-agent symlinks are created when you run the agent-specific setup script below.
 
-| Task | Command | Slash command |
-| --- | --- | --- |
-| Bootstrap a fresh checkout | `npm run setup` | `/setup` |
-| Run all local CI gates before pushing | `npm run check` | `/check` |
-| Open a PR with the right CC-prefixed title | (use the slash command) | `/pr` |
-| Build a Conventional Commits commit message | (use the slash command) | `/commit` |
+| Task                                        | Command                 | Slash command |
+| ------------------------------------------- | ----------------------- | ------------- |
+| Bootstrap a fresh checkout                  | `npm run setup`         | `/setup`      |
+| Run all local CI gates before pushing       | `npm run check`         | `/check`      |
+| Open a PR with the right CC-prefixed title  | (use the slash command) | `/pr`         |
+| Build a Conventional Commits commit message | (use the slash command) | `/commit`     |
 
 `commit` and `pr` aren't npm scripts — the agent reads the skill markdown at `.agents/commands/{commit,pr}.md` and executes the workflow with its built-in `git` and `gh` tooling.
 
@@ -39,12 +35,12 @@ Workflows are exposed two ways: as npm scripts (run with `npm run <name>`) and a
 
 Per-agent command directories (`.claude/commands/`, `.cursor/commands/`) are gitignored — each contributor runs the setup script for their agent of choice once after cloning, and the canonical files at `.agents/commands/` get symlinked into the per-agent directory. Editing a file in `.agents/commands/` immediately changes the behaviour for every linked agent.
 
-| Agent | Setup |
-| --- | --- |
-| Claude Code | `npm run setup:claude` |
-| Cursor | `npm run setup:cursor` |
-| Codex CLI | `npm run setup:codex` (no-op today; re-evaluate when Codex adds a per-project commands convention) |
-| Gemini CLI | `npm run setup:gemini` (no-op today, same reason) |
+| Agent       | Setup                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------- |
+| Claude Code | `npm run setup:claude`                                                                             |
+| Cursor      | `npm run setup:cursor`                                                                             |
+| Codex CLI   | `npm run setup:codex` (no-op today; re-evaluate when Codex adds a per-project commands convention) |
+| Gemini CLI  | `npm run setup:gemini` (no-op today, same reason)                                                  |
 
 The setup script falls back to file-copy on platforms where symlink creation needs elevated privileges (typically stock Windows without developer mode). Copies don't auto-update from the canonical files, but the shims still work.
 
@@ -58,18 +54,18 @@ PR titles follow [Conventional Commits 1.0.0](https://www.conventionalcommits.or
 
 This is **required for everyone** — `.github/workflows/pr-title.yml` runs `amannn/action-semantic-pull-request` on every PR and fails the build if the title doesn't parse. Branch protection requires that check to pass.
 
-| Type | When to use |
-| --- | --- |
-| `feat` | New user-facing functionality |
-| `fix` | Bug fix |
-| `chore` | Internal change (tooling, dependencies, config) |
-| `docs` | Documentation only |
-| `refactor` | Internal restructure, no behavior change |
-| `test` | Tests only |
-| `perf` | Performance improvement |
-| `ci` | CI/CD workflow changes |
-| `build` | Build-system changes |
-| `style` | Formatting / whitespace only |
+| Type       | When to use                                     |
+| ---------- | ----------------------------------------------- |
+| `feat`     | New user-facing functionality                   |
+| `fix`      | Bug fix                                         |
+| `chore`    | Internal change (tooling, dependencies, config) |
+| `docs`     | Documentation only                              |
+| `refactor` | Internal restructure, no behavior change        |
+| `test`     | Tests only                                      |
+| `perf`     | Performance improvement                         |
+| `ci`       | CI/CD workflow changes                          |
+| `build`    | Build-system changes                            |
+| `style`    | Formatting / whitespace only                    |
 
 The `<scope>` is optional. Description should be in imperative mood, under 72 characters, no trailing period. Example: `feat(auth): add account linking from profile page`.
 
