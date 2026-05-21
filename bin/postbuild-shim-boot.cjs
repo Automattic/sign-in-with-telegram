@@ -64,13 +64,10 @@ for (const file of walkPhpFiles(buildDir)) {
 	//   - multi-line files starting with `<?php\n` (or `<?php\r\n`)
 	//   - single-line asset.php files of the form `<?php return array(...);`
 	// Insert the guard right after the opening tag in both cases.
-	const replaced = contents.replace(
-		/^<\?php(\r?\n|\s+)/,
-		(_, sep) => {
-			const eol = sep.includes('\n') ? sep : '\n';
-			return `<?php${eol}${eol}${guardLine}${eol}${eol}`;
-		}
-	);
+	const replaced = contents.replace(/^<\?php(\r?\n|\s+)/, (_, sep) => {
+		const eol = sep.includes('\n') ? sep : '\n';
+		return `<?php${eol}${eol}${guardLine}${eol}${eol}`;
+	});
 
 	if (replaced === contents) {
 		process.stderr.write(
@@ -93,7 +90,7 @@ process.stdout.write(
  * Yield every *.php path under `dir` recursively.
  *
  * @param {string} dir
- * @returns {Generator<string>}
+ * @return {Generator<string>}
  */
 function* walkPhpFiles(dir) {
 	if (!fs.existsSync(dir)) {
