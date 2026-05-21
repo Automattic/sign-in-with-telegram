@@ -23,6 +23,10 @@
 /.nvmrc
 /.distignore
 /.dist
+# release-please plumbing — consumed only by CI / GitHub Actions.
+/release-please-config.json
+/.release-please-manifest.json
+/CHANGELOG.md
 /.agents
 /.claude
 /.cursor

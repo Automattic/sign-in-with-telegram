@@ -1,0 +1,14 @@
+{
+	"bootstrap-sha": "71fbcebd43ad2ca985194929496a79bbeea2360c",
+	"packages": {
+		".": {
+			"release-type": "php",
+			"package-name": "sign-in-with-telegram",
+			"versioning": "always-bump-patch",
+			"extra-files": [
+				"sign-in-with-telegram.php",
+				"readme.txt"
+			]
+		}
+	}
+}

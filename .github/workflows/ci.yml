@@ -45,6 +45,15 @@ jobs:
       - name: PHPUnit
         run: composer phpunit
 
+      # Guards against hand-edits to readme.txt's == Changelog == section.
+      # CHANGELOG.md (managed by release-please) is the source of truth;
+      # the sync script regenerates the readme block. If the regenerated
+      # form differs from what's committed, fail with a diff.
+      - name: Verify readme.txt changelog matches CHANGELOG.md
+        run: |
+          bin/sync-readme-changelog.sh
+          git diff --exit-code readme.txt
+
   js:
     name: JS / TS
     runs-on: ubuntu-latest
