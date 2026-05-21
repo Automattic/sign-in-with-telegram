@@ -44,7 +44,8 @@ sign-in-with-telegram/
   build/                     # GITIGNORED. Produced by `npm run build`.
   vendor/                    # GITIGNORED. Produced by `composer install`.
   tests/php/                 # PHPUnit tests (Brain Monkey for stubbing WP).
-  docs/contributing.md       # Branch protection, lint commands.
+  CONTRIBUTING.md            # PR process, commit / branch conventions, agent setup.
+  .agents/commands/          # Canonical markdown skills (setup, check, commit, pr) symlinked into per-agent dirs by `npm run setup:<agent>`.
   .github/workflows/
     ci.yml                   # PHP matrix 8.1/8.2/8.3 + JS lint/typecheck/test/build.
     plugin-check.yml         # Runs WP Plugin Check against the assembled artifact.
@@ -151,6 +152,12 @@ The OIDC auth flow follows Telegram's [bots/telegram-login](https://core.telegra
 - `@types/react` pinned to ^18.3.27 to match `@wordpress/element`'s React 18. **`@wordpress/*` does not support React 19 yet — do not bump.**
 - Two ESLint rules are disabled in `eslint.config.js`: `import/no-extraneous-dependencies` and `import/no-duplicates`. The shared `eslint-import-resolver-typescript@4` doesn't yet handle TypeScript 6's API surface ("invalid interface loaded as resolver"). `tsc --noEmit` covers what these rules would catch.
 
+### Commit messages, PR titles, branches
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The conventions defined there apply to every change in this repo — **PR titles are enforced by CI** (see [.github/workflows/pr-title.yml](.github/workflows/pr-title.yml)), so non-Conventional-Commits PR titles are blocked from merge. Branches follow the same prefix convention (`feat/...`, `fix/...`, `chore/...`); Linear-style branch names should be renamed before pushing.
+
+Common contributor workflows are exposed two ways. `setup` and `check` are npm scripts — run with `npm run setup` and `npm run check`. `commit` and `pr` are slash-command skills — run them via your agent's UI (`/commit`, `/pr`). Canonical skill content lives at `.agents/commands/`; per-agent symlinks live under `.claude/commands/` (and similar) after `npm run setup:<agent>`.
+
 ### Query parameter naming
 
 All plugin-owned query params use the `telegram_signin_` prefix:
@@ -211,3 +218,4 @@ Not yet wired. Plan: `10up/action-wordpress-plugin-deploy@stable` triggered on `
 - **Never** bundle `@wordpress/boot` ourselves — it's owned by WP/Gutenberg now.
 - **Never** put draft planning docs / scratch notes into a tracked path. The `.gitignore` includes `/temp/` for that purpose.
 - Match the script-handle dep list in `bin/postbuild-shim-boot.cjs` to handles that are _actually registered as classic scripts_ in your target WP/Gutenberg version. Adding script-module-only handles silently breaks the shim.
+- Breaking-change Conventional-Commits syntax (`feat!:`, `BREAKING CHANGE:` footer) is **not** used — `Release-As:` controls bumps in this repo.
