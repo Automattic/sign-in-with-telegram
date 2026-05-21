@@ -45,13 +45,15 @@ jobs:
       - name: PHPUnit
         run: composer phpunit
 
-      # Guards against hand-edits to readme.txt's == Changelog == section.
-      # CHANGELOG.md (managed by release-please) is the source of truth;
-      # the sync script regenerates the readme block. If the regenerated
-      # form differs from what's committed, fail with a diff.
-      - name: Verify readme.txt changelog matches CHANGELOG.md
+      # Guards against hand-edits to readme.txt's derived sections.
+      # CHANGELOG.md (managed by release-please) is the source of truth for
+      # the == Changelog == block; the PHP Version: header (also bumped by
+      # release-please) is the source of truth for Stable tag. Both sync
+      # scripts regenerate readme.txt; if anything drifts, fail with a diff.
+      - name: Verify readme.txt is in sync
         run: |
           bin/sync-readme-changelog.sh
+          bin/sync-readme-version.sh
           git diff --exit-code readme.txt
 
   js:

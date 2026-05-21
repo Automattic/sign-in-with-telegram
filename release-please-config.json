@@ -6,8 +6,7 @@
 			"package-name": "sign-in-with-telegram",
 			"versioning": "always-bump-patch",
 			"extra-files": [
-				"sign-in-with-telegram.php",
-				"readme.txt"
+				"sign-in-with-telegram.php"
 			]
 		}
 	}

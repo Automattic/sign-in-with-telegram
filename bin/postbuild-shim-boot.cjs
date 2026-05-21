@@ -90,7 +90,7 @@ process.stdout.write(
  * Yield every *.php path under `dir` recursively.
  *
  * @param {string} dir
- * @return {Generator<string>}
+ * @return {Function} A generator yielding absolute paths to .php files under `dir`.
  */
 function* walkPhpFiles(dir) {
 	if (!fs.existsSync(dir)) {
