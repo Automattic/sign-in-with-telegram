@@ -23,20 +23,19 @@
 /.distignore
 /.dist
 
-# Source-only directories.
-#
-# /routes (TSX route source) and /packages (block source) ship in the
-# artifact so wp.org's automated source-availability check can match
-# the bundled JS under build/ back to its TypeScript origins. /packages
-# intermediate build outputs (build-module, build) are excluded further
-# down so only the source ships.
+# Source-only directories. The zip ships compiled artifacts only;
+# the TypeScript / TSX origin of the bundled JS under build/ is
+# publicly accessible via the GitHub link in readme.txt (the route
+# wp.org's plugin guidelines #4 allows: "include a link in the readme
+# to the development location" as an alternative to bundling sources).
 #
 # `tests`, `test`, `__tests__`, `__mocks__`, `docs`, `examples` are
 # unanchored on purpose — vendor packages routinely ship test
-# fixtures (e.g. firebase/php-jwt's tests/), and our own routes/
-# carries Jest spec files under __tests__/. None of that belongs in
-# the user-facing zip.
+# fixtures (e.g. firebase/php-jwt's tests/) that don't belong in the
+# user-facing zip.
 /bin
+/packages
+/routes
 docs
 examples
 tests
