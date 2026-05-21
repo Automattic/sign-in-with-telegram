@@ -17,6 +17,7 @@
 .travis.yml
 .vscode
 /.wp-env
+/.wordpress-org
 /.editorconfig
 /.npmrc
 /.nvmrc

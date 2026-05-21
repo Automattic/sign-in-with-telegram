@@ -72,6 +72,14 @@ The plugin is developed in the open at [github.com/Automattic/sign-in-with-teleg
 
 When the `phone` scope is granted, Telegram returns the phone number as a claim in the signed `id_token`. The plugin stores that value in its own usermeta key — `telegram_signin_phone`. Read the verified value via `Automattic\Telegram\SignIn\Phone::for_user( $user_id )`, and hook the `telegram_signin_phone` filter to redact or normalize it. Site authors on WooCommerce can surface the verified value as the customer's billing phone by hooking `woocommerce_customer_get_billing_phone`.
 
+== Screenshots ==
+
+1. Configure bot credentials, sign-up policy, email handling, and optional permissions.
+2. Instructions show the Redirect URI and Trusted Origin for @BotFather.
+3. The WordPress login form gains a Sign in with Telegram button.
+4. User profiles can connect or disconnect Telegram.
+5. The Users list can show Telegram-verified phone numbers.
+
 == External services ==
 
 This plugin connects to Telegram's OpenID Connect provider at `oauth.telegram.org` so visitors can sign in with their Telegram account. No data is sent to Telegram unless a visitor actively starts a sign-in.
