@@ -19,19 +19,11 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # We pass a PAT (RELEASE_PLEASE_TOKEN) rather than the default
-      # GITHUB_TOKEN because GitHub does not fan out workflow triggers from
-      # events created by GITHUB_TOKEN. Without a PAT, the Release PR opens
-      # with zero checks (CI / Plugin Check skip), the tag push triggers no
-      # downstream workflow, and the `release: published` event never fires
-      # deploy.yml. All silent failures. Provision the secret as a
-      # fine-grained PAT scoped to this repo with `contents: write` +
-      # `pull-requests: write`.
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071  # v4
         id: release
         with:
           target-branch: trunk
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          token: ${{ secrets.API_TOKEN_GITHUB }}
 
       # When release-please opens or updates a Release PR, mirror
       # CHANGELOG.md into readme.txt's == Changelog == block on the same
@@ -43,7 +35,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          token: ${{ secrets.API_TOKEN_GITHUB }}
           persist-credentials: true
 
       - name: Sync readme.txt from CHANGELOG.md and PHP Version header
