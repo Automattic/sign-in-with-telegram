@@ -1,14 +1,25 @@
 name: Deploy
 
-# On a published GitHub Release, build the production artifact and attach a
-# .distignore-filtered zip to the Release.
+# Publishes a release of the plugin.
 #
-# The wp.org SVN deploy is NOT wired yet: the plugin is still in wp.org
-# review and the `sign-in-with-telegram` SVN slug isn't provisioned. The 10up
-# deploy action svn-checks-out the slug before doing anything (even with
-# dry-run) and exits early without SVN credentials, so it cannot run until
-# the plugin is approved. The step is stubbed at the bottom of this file,
-# commented, ready to enable then.
+# What runs today: on a published GitHub Release, build the production
+# artifact and attach a .distignore-filtered zip to the Release.
+#
+# What's deferred: the wp.org SVN deploy. The plugin is still in wp.org
+# review, so the `sign-in-with-telegram` SVN repo doesn't exist yet — and
+# the 10up deploy action svn-checks-out that repo before doing anything
+# (even with dry-run), so it can't run until the plugin is approved. The
+# step is stubbed, commented out, at the bottom of this file.
+#
+# TO ENABLE THE wp.org SVN DEPLOY (once the plugin is approved):
+#   1. Confirm the slug is provisioned — i.e. the SVN repo exists at
+#      https://plugins.svn.wordpress.org/sign-in-with-telegram/
+#   2. Add two repository secrets, WPORG_SVN_USERNAME and
+#      WPORG_SVN_PASSWORD — a wp.org account with commit access to the
+#      plugin.
+#   3. Uncomment the "Deploy to wp.org" step at the bottom of this file.
+# The .wordpress-org/ assets (banner, icon, screenshots) are already in
+# the repo; the 10up action picks them up from there automatically.
 on:
   release:
     types: [published]
@@ -115,11 +126,9 @@ jobs:
           if-no-files-found: error
 
       # --- wp.org SVN deploy — NOT YET ENABLED -----------------------------
-      # Uncomment once the plugin is approved on wp.org and the slug
-      # `sign-in-with-telegram` is provisioned, and provision the
-      # WPORG_SVN_USERNAME / WPORG_SVN_PASSWORD repo secrets. The action
-      # checks out the SVN slug before anything else, so it can't run — even
-      # with dry-run — until the slug exists.
+      # Step 3 of the enablement checklist at the top of this file:
+      # uncomment this step once the plugin is approved and the
+      # WPORG_SVN_USERNAME / WPORG_SVN_PASSWORD secrets are set.
       #
       # - name: Deploy to wp.org
       #   uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2  # stable
