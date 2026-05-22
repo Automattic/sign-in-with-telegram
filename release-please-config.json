@@ -19,7 +19,8 @@
       "package-name": "sign-in-with-telegram",
       "versioning": "always-bump-patch",
       "extra-files": [
-        "sign-in-with-telegram.php"
+        "sign-in-with-telegram.php",
+        { "type": "json", "path": "package.json", "jsonpath": "$.version" }
       ]
     }
   }
