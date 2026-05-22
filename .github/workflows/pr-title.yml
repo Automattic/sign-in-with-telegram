@@ -1,4 +1,4 @@
-name: PR title
+name: PR Title
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  conventional-commits:
     name: Conventional Commits
     runs-on: ubuntu-latest
     permissions:
