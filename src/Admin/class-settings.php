@@ -43,13 +43,14 @@ class Settings {
 	private const EMAIL_MODES = array( 'none', 'placeholder' );
 
 	/**
-	 * Capabilities that mark a role as too privileged to hand to a user
-	 * who self-registered through a Telegram sign-in. A role carrying any
-	 * of these is excluded from the default-role picker so an anonymous
-	 * sign-up can never gain administrative control of the site. The list
-	 * targets site-administration powers — `administrator` (and any custom
-	 * admin-equivalent role) is filtered out; editor / author / contributor
-	 * / subscriber keep none of these and stay selectable.
+	 * Capabilities that mark a role as too privileged to apply to a
+	 * WordPress account created for a first-time Telegram sign-in. A role
+	 * carrying any of these is excluded from the default-role picker, so a
+	 * newly created account can never be granted administrative control of
+	 * the site. The list targets site-administration powers —
+	 * `administrator` (and any custom admin-equivalent role) is filtered
+	 * out; editor / author / contributor / subscriber keep none of these
+	 * and stay selectable.
 	 *
 	 * @var string[]
 	 */
@@ -374,10 +375,11 @@ class Settings {
 	public function get_default_role(): string {
 		$role = (string) $this->get_setting_value( 'default_role' );
 
-		// Never hand a privileged role to a self-registered user, even if
-		// the stored option somehow holds one — set before the picker was
-		// restricted, or written straight to the database. Fall back to the
-		// safe default when the stored value isn't an assignable role.
+		// Never apply a privileged role to an account created for a
+		// Telegram sign-in, even if the stored option somehow holds one —
+		// set before the picker was restricted, or written straight to the
+		// database. Fall back to the safe default when the stored value
+		// isn't an assignable role.
 		return array_key_exists( $role, self::assignable_roles() ) ? $role : self::default_role();
 	}
 
@@ -535,8 +537,8 @@ class Settings {
 	}
 
 	/**
-	 * Registered roles that are safe to assign to a user who self-registers
-	 * through a Telegram sign-in — every role except those carrying a
+	 * Registered roles that are safe to apply to a WordPress account
+	 * created for a Telegram sign-in — every role except those carrying a
 	 * site-administration capability (see {@see self::PRIVILEGED_CAPABILITIES}).
 	 *
 	 * @return array<string,mixed>

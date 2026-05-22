@@ -19,8 +19,9 @@ export const BOT_TOKEN_SHAPE = /^\d+:[A-Za-z0-9_-]+$/;
  * cover ~99% of the use case. Sites with custom roles can edit the option
  * directly until we add a role picker.
  *
- * `administrator` is intentionally absent: a user who self-registers
- * through a Telegram sign-in must never be assignable an admin role.
+ * `administrator` is intentionally absent: a WordPress account created
+ * for a first-time Telegram sign-in must never be assignable an admin
+ * role.
  */
 const ROLE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
 	{ value: 'subscriber', label: __('Subscriber', 'sign-in-with-telegram') },
