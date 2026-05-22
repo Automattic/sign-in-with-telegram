@@ -28,6 +28,16 @@ if [[ -z "$VERSION" ]]; then
 	exit 1
 fi
 
+# Fail loudly if the target line isn't exactly where we expect it. Without
+# this, a deleted/renamed Stable tag line would make the sed below a no-op,
+# cmp would report "already in sync", and the CI drift guard would pass with
+# a broken wp.org header.
+stable_tag_lines=$(grep -c '^Stable tag:' "$README" || true)
+if [[ "$stable_tag_lines" -ne 1 ]]; then
+	echo "Expected exactly one 'Stable tag:' line in $README, found $stable_tag_lines" >&2
+	exit 1
+fi
+
 # Portable sed (works on BSD + GNU) via a temp file.
 tmp=$(mktemp)
 trap 'rm -f "$tmp"' EXIT

@@ -35,6 +35,11 @@ sed -E \
 
 # Replace the entire == Changelog == ... section of readme.txt with the
 # rendered body. Section ends at the next "== Heading ==" line or EOF.
+#
+# awk exits 1 if it didn't find exactly one == Changelog == heading — that
+# would mean the section was renamed or deleted, and a silent no-op here
+# would let the CI drift guard pass while the changelog stops being
+# maintained. The non-zero exit aborts the script via `set -e`.
 new=$(awk -v body_file="$rendered_file" '
 	BEGIN { in_section = 0; matched = 0 }
 	/^== Changelog ==[[:space:]]*$/ && !matched {
@@ -55,12 +60,13 @@ new=$(awk -v body_file="$rendered_file" '
 	}
 	in_section && /^== / { in_section = 0 }
 	!in_section { print }
+	END {
+		if (matched != 1) {
+			print "ERROR: could not locate a == Changelog == section in readme.txt" > "/dev/stderr"
+			exit 1
+		}
+	}
 ' "$README")
-
-if [[ -z "$new" ]]; then
-	echo "Could not locate == Changelog == in readme.txt" >&2
-	exit 1
-fi
 
 if [[ "$new" != "$(cat "$README")" ]]; then
 	printf '%s\n' "$new" > "$README"
