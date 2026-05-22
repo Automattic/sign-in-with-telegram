@@ -96,15 +96,14 @@ This service is provided by Telegram. Refer to Telegram's [Terms of Service](htt
 
 = 0.1.2 =
 
-* harden self-registration role and refresh dependencies (#22) (0672235)
+* Harden self-registration role and refresh dependencies.
 
 = 0.1.1 =
 
-* make Telegram login button full-width on wp-login (#20) (acc576b)
-
-* add WordPress.org plugin assets (#17) (8523be9)
-* scaffold release-please for auto-versioning + changelog sync (#16) (260dcb9)
-* update login form screenshot to reflect full-width button (#21) (e60974c)
+* Make Telegram login button full-width on wp-login.
+* Add WordPress.org plugin assets.
+* Scaffold release-please for auto-versioning + changelog sync.
+* Update login form screenshot to reflect full-width button.
 
 = 0.1.0 =
 
