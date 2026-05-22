@@ -14,19 +14,20 @@ export const BOT_TOKEN_SHAPE = /^\d+:[A-Za-z0-9_-]+$/;
 
 /**
  * Hardcoded WP role list. The plugin's option schema accepts any
- * registered role, but we don't have a clean REST endpoint to list them
- * dynamically — the WP-built-ins cover ~99% of the use case. Sites with
- * custom roles can edit the option directly until we add a role picker.
+ * registered role without site-administration capabilities, but we don't
+ * have a clean REST endpoint to list them dynamically — the WP built-ins
+ * cover ~99% of the use case. Sites with custom roles can edit the option
+ * directly until we add a role picker.
+ *
+ * `administrator` is intentionally absent: a WordPress account created
+ * for a first-time Telegram sign-in must never be given an administrator
+ * role.
  */
 const ROLE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
 	{ value: 'subscriber', label: __('Subscriber', 'sign-in-with-telegram') },
 	{ value: 'contributor', label: __('Contributor', 'sign-in-with-telegram') },
 	{ value: 'author', label: __('Author', 'sign-in-with-telegram') },
 	{ value: 'editor', label: __('Editor', 'sign-in-with-telegram') },
-	{
-		value: 'administrator',
-		label: __('Administrator', 'sign-in-with-telegram'),
-	},
 ];
 
 const EMAIL_MODE_OPTIONS: ReadonlyArray<{

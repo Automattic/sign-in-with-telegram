@@ -49,9 +49,47 @@ final class Settings_Test extends TestCase {
 		parent::setUp();
 		Monkey\setUp();
 
+		// WordPress's built-in roles are strictly nested (subscriber ⊂
+		// editor ⊂ administrator); the fixture mirrors that. `plugin_updater`
+		// is a custom role whose only extra power is `update_plugins` — a
+		// capability no hand-maintained denylist would necessarily catch —
+		// used to prove the subset-of-editor check still excludes it.
 		$this->roles                  = array(
-			'subscriber' => array( 'name' => 'Subscriber' ),
-			'editor'     => array( 'name' => 'Editor' ),
+			'subscriber'     => array(
+				'name'         => 'Subscriber',
+				'capabilities' => array( 'read' => true ),
+			),
+			'editor'         => array(
+				'name'         => 'Editor',
+				'capabilities' => array(
+					'read'              => true,
+					'edit_posts'        => true,
+					'edit_others_posts' => true,
+					'publish_posts'     => true,
+					'publish_pages'     => true,
+					'manage_categories' => true,
+				),
+			),
+			'administrator'  => array(
+				'name'         => 'Administrator',
+				'capabilities' => array(
+					'read'              => true,
+					'edit_posts'        => true,
+					'edit_others_posts' => true,
+					'publish_posts'     => true,
+					'publish_pages'     => true,
+					'manage_categories' => true,
+					'manage_options'    => true,
+					'install_plugins'   => true,
+				),
+			),
+			'plugin_updater' => array(
+				'name'         => 'Plugin Updater',
+				'capabilities' => array(
+					'read'           => true,
+					'update_plugins' => true,
+				),
+			),
 		);
 		$this->default_role           = 'subscriber';
 		$this->settings_option_exists = false;
@@ -228,6 +266,87 @@ final class Settings_Test extends TestCase {
 
 		$this->assertSame( 'placeholder', $sanitized['email_mode'] );
 		$this->assertSame( '', $sanitized['post_login_redirect'] );
+	}
+
+	public function test_schema_default_role_enum_excludes_roles_more_privileged_than_editor(): void {
+		$enum = Settings::schema()['properties']['default_role']['enum'];
+
+		$this->assertContains( 'subscriber', $enum );
+		$this->assertContains( 'editor', $enum );
+		$this->assertNotContains(
+			'administrator',
+			$enum,
+			'administrator grants capabilities beyond editor and must not be offered.'
+		);
+		$this->assertNotContains(
+			'plugin_updater',
+			$enum,
+			'A custom role whose only extra power is update_plugins still grants more than editor — the subset check must exclude it without that capability being enumerated anywhere.'
+		);
+	}
+
+	public function test_capability_explicitly_set_to_false_does_not_make_a_role_privileged(): void {
+		// A role may map a capability to false to revoke it. Only granted
+		// (truthy) capabilities count — a revoked one must not exclude the role.
+		$this->roles['revoked_admin'] = array(
+			'name'         => 'Revoked Admin',
+			'capabilities' => array(
+				'read'           => true,
+				'manage_options' => false,
+			),
+		);
+
+		$enum = Settings::schema()['properties']['default_role']['enum'];
+
+		$this->assertContains( 'revoked_admin', $enum );
+	}
+
+	public function test_ceiling_falls_back_to_a_lower_role_when_editor_is_unregistered(): void {
+		// With `editor` gone, the ceiling drops to the next built-in present
+		// (here `subscriber`), so anything above it is excluded — fail-safe.
+		unset( $this->roles['editor'] );
+
+		$enum = Settings::schema()['properties']['default_role']['enum'];
+
+		$this->assertContains( 'subscriber', $enum );
+		$this->assertNotContains( 'administrator', $enum );
+		$this->assertNotContains( 'plugin_updater', $enum );
+	}
+
+	public function test_no_reference_role_excludes_privileged_roles_rather_than_failing_open(): void {
+		// If a site has removed every built-in reference role, the ceiling is
+		// empty — a privileged role is still excluded (fail-safe, not open),
+		// and get_default_role() still resolves to the safe subscriber slug.
+		$this->roles = array(
+			'administrator' => array(
+				'name'         => 'Administrator',
+				'capabilities' => array( 'manage_options' => true ),
+			),
+		);
+
+		$enum = Settings::schema()['properties']['default_role']['enum'];
+
+		$this->assertNotContains( 'administrator', $enum );
+		$this->assertSame( 'subscriber', ( new Settings() )->get_default_role() );
+	}
+
+	public function test_get_default_role_returns_a_stored_non_privileged_role(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'default_role' => 'editor' );
+
+		$this->assertSame( 'editor', $settings->get_default_role() );
+	}
+
+	public function test_get_default_role_falls_back_when_the_stored_role_is_privileged(): void {
+		// A privileged role can still reach the option — set before the
+		// picker was restricted, or written straight to the database.
+		// get_default_role() must never hand it to a self-registered user.
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'default_role' => 'administrator' );
+
+		$this->assertSame( 'subscriber', $settings->get_default_role() );
 	}
 
 	public function test_get_button_label_falls_back_to_default_when_unset(): void {

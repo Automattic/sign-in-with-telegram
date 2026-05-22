@@ -43,6 +43,17 @@ class Settings {
 	private const EMAIL_MODES = array( 'none', 'placeholder' );
 
 	/**
+	 * Built-in roles to use as the reference "ceiling" for the default-role
+	 * picker, in descending privilege. `editor` — the most privileged role
+	 * the picker may offer — is used whenever it's registered; the lower
+	 * entries are fallbacks for the rare site that has removed `editor`, so
+	 * the reference is never higher than intended.
+	 *
+	 * @var string[]
+	 */
+	private const CEILING_ROLE_PREFERENCE = array( 'editor', 'author', 'contributor', 'subscriber' );
+
+	/**
 	 * Hook settings registration into WordPress.
 	 */
 	public function register(): void {
@@ -132,7 +143,7 @@ class Settings {
 				),
 				'default_role'        => array(
 					'type'    => 'string',
-					'enum'    => array_keys( self::roles() ),
+					'enum'    => array_keys( self::assignable_roles() ),
 					'default' => $default_role,
 				),
 				'allow_signups'       => array(
@@ -343,7 +354,14 @@ class Settings {
 	 * @return string
 	 */
 	public function get_default_role(): string {
-		return $this->get_setting_value( 'default_role' );
+		$role = (string) $this->get_setting_value( 'default_role' );
+
+		// Never apply a privileged role to an account created for a
+		// Telegram sign-in, even if the stored option somehow holds one —
+		// set before the picker was restricted, or written straight to the
+		// database. Fall back to the safe default when the stored value
+		// isn't an assignable role.
+		return array_key_exists( $role, self::assignable_roles() ) ? $role : self::default_role();
 	}
 
 	/**
@@ -480,14 +498,23 @@ class Settings {
 	 * @return string
 	 */
 	private static function default_role(): string {
-		$roles = self::roles();
-		$role  = get_option( 'default_role', 'subscriber' );
+		$assignable = self::assignable_roles();
+		$role       = get_option( 'default_role', 'subscriber' );
 
-		if ( array_key_exists( $role, $roles ) ) {
+		if ( array_key_exists( $role, $assignable ) ) {
 			return $role;
 		}
 
-		return array_key_exists( 'subscriber', $roles ) ? 'subscriber' : (string) array_key_first( $roles );
+		// `subscriber` is WordPress's canonical low-privilege role.
+		if ( array_key_exists( 'subscriber', $assignable ) ) {
+			return 'subscriber';
+		}
+
+		// Keep the schema default within the enum when subscriber is
+		// absent — fall to the first assignable role. The literal slug is
+		// the last resort only when no role is assignable at all (a
+		// degenerate site), so we never return an empty string.
+		return (string) ( array_key_first( $assignable ) ?? 'subscriber' );
 	}
 
 	/**
@@ -497,5 +524,71 @@ class Settings {
 	 */
 	private static function roles(): array {
 		return wp_roles()->roles;
+	}
+
+	/**
+	 * Registered roles safe to apply to a WordPress account created for a
+	 * Telegram sign-in: every role that grants nothing beyond the built-in
+	 * `editor` role.
+	 *
+	 * Comparing each role against `editor` — the most privileged role the
+	 * picker may offer — is deliberately fail-safe. Any capability `editor`
+	 * lacks (core or plugin-defined, present or future) disqualifies the
+	 * role, so there is no denylist of "dangerous" capabilities to keep
+	 * complete and nothing to miss. `administrator` and any custom
+	 * admin-tier role are filtered out; editor / author / contributor /
+	 * subscriber stay selectable.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function assignable_roles(): array {
+		$registered = self::roles();
+		$ceiling    = self::ceiling_capabilities( $registered );
+
+		$assignable = array();
+		foreach ( $registered as $slug => $role ) {
+			// Assignable only if it grants nothing beyond the ceiling role.
+			if ( array() === array_diff( self::role_capabilities( $role ), $ceiling ) ) {
+				$assignable[ $slug ] = $role;
+			}
+		}
+
+		return $assignable;
+	}
+
+	/**
+	 * Capability slugs granted by a registered-role entry, ignoring any
+	 * capability explicitly mapped to false.
+	 *
+	 * @param mixed $role A `wp_roles()->roles` entry.
+	 *
+	 * @return string[]
+	 */
+	private static function role_capabilities( mixed $role ): array {
+		if ( ! is_array( $role ) || ! isset( $role['capabilities'] ) || ! is_array( $role['capabilities'] ) ) {
+			return array();
+		}
+
+		return array_keys( array_filter( $role['capabilities'] ) );
+	}
+
+	/**
+	 * Capabilities of the most privileged role the default-role picker may
+	 * offer — `editor` by default (see {@see self::CEILING_ROLE_PREFERENCE}).
+	 * Falls through to lower built-ins if a site has removed `editor`, so
+	 * the reference is never higher than intended.
+	 *
+	 * @param array<string,mixed> $registered Registered roles keyed by slug.
+	 *
+	 * @return string[]
+	 */
+	private static function ceiling_capabilities( array $registered ): array {
+		foreach ( self::CEILING_ROLE_PREFERENCE as $slug ) {
+			if ( isset( $registered[ $slug ] ) ) {
+				return self::role_capabilities( $registered[ $slug ] );
+			}
+		}
+
+		return array();
 	}
 }

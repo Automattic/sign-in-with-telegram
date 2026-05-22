@@ -195,7 +195,7 @@ class Login_Handler {
 	 * Login flow:
 	 *  - Existing mapping → return that user.
 	 *  - Currently logged in + no mapping → attach to current user (no dup).
-	 *  - Anonymous + signups allowed → create.
+	 *  - Not signed in to WordPress + signups allowed → create.
 	 *
 	 * Link flow (intent === 'link', tx->user_id is the originating user):
 	 *  - Sub already mapped to the SAME user → idempotent success.
