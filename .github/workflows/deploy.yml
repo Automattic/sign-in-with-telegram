@@ -1,0 +1,138 @@
+name: Deploy
+
+# Publishes a release of the plugin.
+#
+# What runs today: on a published GitHub Release, build the production
+# artifact and attach a .distignore-filtered zip to the Release.
+#
+# What's deferred: the wp.org SVN deploy. The plugin is still in wp.org
+# review, so the `sign-in-with-telegram` SVN repo doesn't exist yet — and
+# the 10up deploy action svn-checks-out that repo before doing anything
+# (even with dry-run), so it can't run until the plugin is approved. The
+# step is stubbed, commented out, at the bottom of this file.
+#
+# TO ENABLE THE wp.org SVN DEPLOY (once the plugin is approved):
+#   1. Confirm the slug is provisioned — i.e. the SVN repo exists at
+#      https://plugins.svn.wordpress.org/sign-in-with-telegram/
+#   2. Add two repository secrets, WPORG_SVN_USERNAME and
+#      WPORG_SVN_PASSWORD — a wp.org account with commit access to the
+#      plugin.
+#   3. Uncomment the "Deploy to wp.org" step at the bottom of this file.
+# The .wordpress-org/ assets (banner, icon, screenshots) are already in
+# the repo; the 10up action picks them up from there automatically.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to verify + name the zip after (optional; blank = build the zip only, no version check)'
+        required: false
+        default: ''
+
+# Default-deny all permissions; the job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload the zip as a Release asset.
+      contents: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f  # v2 (2.30.2)
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install Composer dependencies (production only)
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --classmap-authoritative
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      # On a `release` event the tag comes from the event payload. On a
+      # manual `workflow_dispatch` run it comes from the optional `tag`
+      # input — NOT github.ref_name, which would be a branch name and make
+      # the version check below compare e.g. "trunk" against "0.1.0".
+      # `artifact` is a non-empty name for the workflow artifact even when
+      # no tag is given (falls back to the short commit SHA).
+      - name: Resolve release tag
+        id: tag
+        run: |
+          tag='${{ github.event.release.tag_name }}${{ inputs.tag }}'
+          echo "name=$tag" >> "$GITHUB_OUTPUT"
+          if [[ -n "$tag" ]]; then
+            echo "artifact=sign-in-with-telegram-$tag" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact=sign-in-with-telegram-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Skipped on a manual run with no tag — there's nothing to check the
+      # build against, and it's still useful to produce the zip artifact.
+      - name: Verify Version / Stable tag / release tag agreement
+        if: steps.tag.outputs.name != ''
+        run: bin/verify-version-agreement.sh "${{ steps.tag.outputs.name }}"
+
+      # Stage a clean mirror filtered by .distignore — same recipe as
+      # plugin-check.yml — and zip it under the slug directory so the archive
+      # extracts to sign-in-with-telegram/.
+      - name: Build the .distignore-filtered zip
+        run: |
+          rm -rf .dist
+          mkdir -p .dist/sign-in-with-telegram
+          grep -vE '^[[:space:]]*(#|$)' .distignore > "$RUNNER_TEMP/dist-excludes"
+          rsync -a \
+            --exclude-from="$RUNNER_TEMP/dist-excludes" \
+            --exclude='/.dist/' \
+            --exclude='/.git/' \
+            ./ .dist/sign-in-with-telegram/
+          ( cd .dist && zip -qr sign-in-with-telegram.zip sign-in-with-telegram )
+
+      - name: Attach the zip to the GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ steps.tag.outputs.name }}" .dist/sign-in-with-telegram.zip --clobber
+
+      # Also surface the zip on manual runs (no Release to attach to) so the
+      # workflow can be smoke-tested via workflow_dispatch.
+      - name: Upload the zip as a workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ${{ steps.tag.outputs.artifact }}
+          path: .dist/sign-in-with-telegram.zip
+          if-no-files-found: error
+
+      # --- wp.org SVN deploy — NOT YET ENABLED -----------------------------
+      # Step 3 of the enablement checklist at the top of this file:
+      # uncomment this step once the plugin is approved and the
+      # WPORG_SVN_USERNAME / WPORG_SVN_PASSWORD secrets are set.
+      #
+      # - name: Deploy to wp.org
+      #   uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2  # stable
+      #   env:
+      #     SVN_USERNAME: ${{ secrets.WPORG_SVN_USERNAME }}
+      #     SVN_PASSWORD: ${{ secrets.WPORG_SVN_PASSWORD }}
+      #     SLUG: sign-in-with-telegram
