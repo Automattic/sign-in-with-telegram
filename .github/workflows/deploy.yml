@@ -22,8 +22,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release-zip:
-    name: Build + attach release zip
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     permissions:
       # Needed to upload the zip as a Release asset.
