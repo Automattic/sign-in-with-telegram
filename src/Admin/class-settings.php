@@ -498,17 +498,23 @@ class Settings {
 	 * @return string
 	 */
 	private static function default_role(): string {
-		$role = get_option( 'default_role', 'subscriber' );
+		$assignable = self::assignable_roles();
+		$role       = get_option( 'default_role', 'subscriber' );
 
-		if ( array_key_exists( $role, self::assignable_roles() ) ) {
+		if ( array_key_exists( $role, $assignable ) ) {
 			return $role;
 		}
 
-		// `subscriber` is WordPress's canonical low-privilege role. Fall
-		// back to it unconditionally so we never hand an empty role string
-		// to wp_insert_user(); even on the rare site that has unregistered
-		// it, the created account simply gets no capabilities — still safe.
-		return 'subscriber';
+		// `subscriber` is WordPress's canonical low-privilege role.
+		if ( array_key_exists( 'subscriber', $assignable ) ) {
+			return 'subscriber';
+		}
+
+		// Keep the schema default within the enum when subscriber is
+		// absent — fall to the first assignable role. The literal slug is
+		// the last resort only when no role is assignable at all (a
+		// degenerate site), so we never return an empty string.
+		return (string) ( array_key_first( $assignable ) ?? 'subscriber' );
 	}
 
 	/**
