@@ -43,34 +43,15 @@ class Settings {
 	private const EMAIL_MODES = array( 'none', 'placeholder' );
 
 	/**
-	 * Capabilities that mark a role as too privileged to apply to a
-	 * WordPress account created for a first-time Telegram sign-in. A role
-	 * carrying any of these is excluded from the default-role picker, so a
-	 * newly created account can never be granted administrative control of
-	 * the site. The list targets site-administration powers —
-	 * `administrator` (and any custom admin-equivalent role) is filtered
-	 * out; editor / author / contributor / subscriber keep none of these
-	 * and stay selectable.
+	 * Built-in roles to use as the reference "ceiling" for the default-role
+	 * picker, in descending privilege. `editor` — the most privileged role
+	 * the picker may offer — is used whenever it's registered; the lower
+	 * entries are fallbacks for the rare site that has removed `editor`, so
+	 * the reference is never higher than intended.
 	 *
 	 * @var string[]
 	 */
-	private const PRIVILEGED_CAPABILITIES = array(
-		'manage_options',
-		'edit_users',
-		'create_users',
-		'delete_users',
-		'promote_users',
-		'activate_plugins',
-		'install_plugins',
-		'edit_plugins',
-		'install_themes',
-		'edit_themes',
-		'switch_themes',
-		'update_core',
-		'edit_files',
-		'import',
-		'export',
-	);
+	private const CEILING_ROLE_PREFERENCE = array( 'editor', 'author', 'contributor', 'subscriber' );
 
 	/**
 	 * Hook settings registration into WordPress.
@@ -517,14 +498,17 @@ class Settings {
 	 * @return string
 	 */
 	private static function default_role(): string {
-		$roles = self::assignable_roles();
-		$role  = get_option( 'default_role', 'subscriber' );
+		$role = get_option( 'default_role', 'subscriber' );
 
-		if ( array_key_exists( $role, $roles ) ) {
+		if ( array_key_exists( $role, self::assignable_roles() ) ) {
 			return $role;
 		}
 
-		return array_key_exists( 'subscriber', $roles ) ? 'subscriber' : (string) array_key_first( $roles );
+		// `subscriber` is WordPress's canonical low-privilege role. Fall
+		// back to it unconditionally so we never hand an empty role string
+		// to wp_insert_user(); even on the rare site that has unregistered
+		// it, the created account simply gets no capabilities — still safe.
+		return 'subscriber';
 	}
 
 	/**
@@ -537,33 +521,68 @@ class Settings {
 	}
 
 	/**
-	 * Registered roles that are safe to apply to a WordPress account
-	 * created for a Telegram sign-in — every role except those carrying a
-	 * site-administration capability (see {@see self::PRIVILEGED_CAPABILITIES}).
+	 * Registered roles safe to apply to a WordPress account created for a
+	 * Telegram sign-in: every role that grants nothing beyond the built-in
+	 * `editor` role.
+	 *
+	 * Comparing each role against `editor` — the most privileged role the
+	 * picker may offer — is deliberately fail-safe. Any capability `editor`
+	 * lacks (core or plugin-defined, present or future) disqualifies the
+	 * role, so there is no denylist of "dangerous" capabilities to keep
+	 * complete and nothing to miss. `administrator` and any custom
+	 * admin-tier role are filtered out; editor / author / contributor /
+	 * subscriber stay selectable.
 	 *
 	 * @return array<string,mixed>
 	 */
 	private static function assignable_roles(): array {
+		$registered = self::roles();
+		$ceiling    = self::ceiling_capabilities( $registered );
+
 		$assignable = array();
-
-		foreach ( self::roles() as $slug => $role ) {
-			$capabilities = ( is_array( $role ) && isset( $role['capabilities'] ) && is_array( $role['capabilities'] ) )
-				? $role['capabilities']
-				: array();
-
-			$privileged = false;
-			foreach ( self::PRIVILEGED_CAPABILITIES as $capability ) {
-				if ( ! empty( $capabilities[ $capability ] ) ) {
-					$privileged = true;
-					break;
-				}
-			}
-
-			if ( ! $privileged ) {
+		foreach ( $registered as $slug => $role ) {
+			// Assignable only if it grants nothing beyond the ceiling role.
+			if ( array() === array_diff( self::role_capabilities( $role ), $ceiling ) ) {
 				$assignable[ $slug ] = $role;
 			}
 		}
 
 		return $assignable;
+	}
+
+	/**
+	 * Capability slugs granted by a registered-role entry, ignoring any
+	 * capability explicitly mapped to false.
+	 *
+	 * @param mixed $role A `wp_roles()->roles` entry.
+	 *
+	 * @return string[]
+	 */
+	private static function role_capabilities( mixed $role ): array {
+		if ( ! is_array( $role ) || ! isset( $role['capabilities'] ) || ! is_array( $role['capabilities'] ) ) {
+			return array();
+		}
+
+		return array_keys( array_filter( $role['capabilities'] ) );
+	}
+
+	/**
+	 * Capabilities of the most privileged role the default-role picker may
+	 * offer — `editor` by default (see {@see self::CEILING_ROLE_PREFERENCE}).
+	 * Falls through to lower built-ins if a site has removed `editor`, so
+	 * the reference is never higher than intended.
+	 *
+	 * @param array<string,mixed> $registered Registered roles keyed by slug.
+	 *
+	 * @return string[]
+	 */
+	private static function ceiling_capabilities( array $registered ): array {
+		foreach ( self::CEILING_ROLE_PREFERENCE as $slug ) {
+			if ( isset( $registered[ $slug ] ) ) {
+				return self::role_capabilities( $registered[ $slug ] );
+			}
+		}
+
+		return array();
 	}
 }

@@ -49,23 +49,45 @@ final class Settings_Test extends TestCase {
 		parent::setUp();
 		Monkey\setUp();
 
+		// WordPress's built-in roles are strictly nested (subscriber ⊂
+		// editor ⊂ administrator); the fixture mirrors that. `plugin_updater`
+		// is a custom role whose only extra power is `update_plugins` — a
+		// capability no hand-maintained denylist would necessarily catch —
+		// used to prove the subset-of-editor check still excludes it.
 		$this->roles                  = array(
-			'subscriber'    => array(
+			'subscriber'     => array(
 				'name'         => 'Subscriber',
 				'capabilities' => array( 'read' => true ),
 			),
-			'editor'        => array(
+			'editor'         => array(
 				'name'         => 'Editor',
 				'capabilities' => array(
+					'read'              => true,
+					'edit_posts'        => true,
 					'edit_others_posts' => true,
+					'publish_posts'     => true,
 					'publish_pages'     => true,
+					'manage_categories' => true,
 				),
 			),
-			'administrator' => array(
+			'administrator'  => array(
 				'name'         => 'Administrator',
 				'capabilities' => array(
-					'manage_options'  => true,
-					'install_plugins' => true,
+					'read'              => true,
+					'edit_posts'        => true,
+					'edit_others_posts' => true,
+					'publish_posts'     => true,
+					'publish_pages'     => true,
+					'manage_categories' => true,
+					'manage_options'    => true,
+					'install_plugins'   => true,
+				),
+			),
+			'plugin_updater' => array(
+				'name'         => 'Plugin Updater',
+				'capabilities' => array(
+					'read'           => true,
+					'update_plugins' => true,
 				),
 			),
 		);
@@ -246,16 +268,20 @@ final class Settings_Test extends TestCase {
 		$this->assertSame( '', $sanitized['post_login_redirect'] );
 	}
 
-	public function test_schema_default_role_enum_excludes_privileged_roles(): void {
-		$schema = Settings::schema();
-		$enum   = $schema['properties']['default_role']['enum'];
+	public function test_schema_default_role_enum_excludes_roles_more_privileged_than_editor(): void {
+		$enum = Settings::schema()['properties']['default_role']['enum'];
 
 		$this->assertContains( 'subscriber', $enum );
 		$this->assertContains( 'editor', $enum );
 		$this->assertNotContains(
 			'administrator',
 			$enum,
-			'A role with site-administration capabilities must not be assignable to a self-registered user.'
+			'administrator grants capabilities beyond editor and must not be offered.'
+		);
+		$this->assertNotContains(
+			'plugin_updater',
+			$enum,
+			'A custom role whose only extra power is update_plugins still grants more than editor — the subset check must exclude it without that capability being enumerated anywhere.'
 		);
 	}
 
