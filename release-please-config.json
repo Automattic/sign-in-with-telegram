@@ -1,5 +1,6 @@
 {
   "bootstrap-sha": "71fbcebd43ad2ca985194929496a79bbeea2360c",
+  "include-component-in-tag": false,
   "packages": {
     ".": {
       "release-type": "php",

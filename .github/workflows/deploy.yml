@@ -1,0 +1,113 @@
+name: Deploy
+
+# On a published GitHub Release, build the production artifact and attach a
+# .distignore-filtered zip to the Release.
+#
+# The wp.org SVN deploy is NOT wired yet: the plugin is still in wp.org
+# review and the `sign-in-with-telegram` SVN slug isn't provisioned. The 10up
+# deploy action svn-checks-out the slug before doing anything (even with
+# dry-run) and exits early without SVN credentials, so it cannot run until
+# the plugin is approved. The step is stubbed at the bottom of this file,
+# commented, ready to enable then.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# Default-deny all permissions; the job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-zip:
+    name: Build + attach release zip
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload the zip as a Release asset.
+      contents: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f  # v2 (2.30.2)
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install Composer dependencies (production only)
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --classmap-authoritative
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      # On a `release` event the tag is on the event payload; on a manual
+      # `workflow_dispatch` run it's whatever ref the run was started from.
+      - name: Resolve release tag
+        id: tag
+        run: |
+          tag='${{ github.event.release.tag_name }}'
+          [[ -n "$tag" ]] || tag='${{ github.ref_name }}'
+          echo "name=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Version / Stable tag / release tag agreement
+        run: bin/verify-version-agreement.sh "${{ steps.tag.outputs.name }}"
+
+      # Stage a clean mirror filtered by .distignore — same recipe as
+      # plugin-check.yml — and zip it under the slug directory so the archive
+      # extracts to sign-in-with-telegram/.
+      - name: Build the .distignore-filtered zip
+        run: |
+          rm -rf .dist
+          mkdir -p .dist/sign-in-with-telegram
+          grep -vE '^[[:space:]]*(#|$)' .distignore > "$RUNNER_TEMP/dist-excludes"
+          rsync -a \
+            --exclude-from="$RUNNER_TEMP/dist-excludes" \
+            --exclude='/.dist/' \
+            --exclude='/.git/' \
+            ./ .dist/sign-in-with-telegram/
+          ( cd .dist && zip -qr sign-in-with-telegram.zip sign-in-with-telegram )
+
+      - name: Attach the zip to the GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ steps.tag.outputs.name }}" .dist/sign-in-with-telegram.zip --clobber
+
+      # Also surface the zip on manual runs (no Release to attach to) so the
+      # workflow can be smoke-tested via workflow_dispatch.
+      - name: Upload the zip as a workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: sign-in-with-telegram-${{ steps.tag.outputs.name }}
+          path: .dist/sign-in-with-telegram.zip
+          if-no-files-found: error
+
+      # --- wp.org SVN deploy — NOT YET ENABLED -----------------------------
+      # Uncomment once the plugin is approved on wp.org and the slug
+      # `sign-in-with-telegram` is provisioned, and provision the
+      # WPORG_SVN_USERNAME / WPORG_SVN_PASSWORD repo secrets. The action
+      # checks out the SVN slug before anything else, so it can't run — even
+      # with dry-run — until the slug exists.
+      #
+      # - name: Deploy to wp.org
+      #   uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2  # stable
+      #   env:
+      #     SVN_USERNAME: ${{ secrets.WPORG_SVN_USERNAME }}
+      #     SVN_PASSWORD: ${{ secrets.WPORG_SVN_PASSWORD }}
+      #     SLUG: sign-in-with-telegram
