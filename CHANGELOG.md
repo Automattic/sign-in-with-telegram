@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/Automattic/sign-in-with-telegram/compare/v0.1.1...v0.1.2) (2026-05-22)
+
+
+### Bug Fixes
+
+* harden self-registration role and refresh dependencies ([#22](https://github.com/Automattic/sign-in-with-telegram/issues/22)) ([0672235](https://github.com/Automattic/sign-in-with-telegram/commit/067223524c70e4a41f089e6abde1e13e5e8967b7))
+
 ## [0.1.1](https://github.com/Automattic/sign-in-with-telegram/compare/v0.1.0...v0.1.1) (2026-05-22)
 
 

@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/Automattic/sign-in-with-telegram
  * Description:       Let your visitors sign in to WordPress with their Telegram account.
  * x-release-please-start-version
- * Version:           0.1.1
+ * Version:           0.1.2
  * x-release-please-end
  * Requires at least: 6.8
  * Requires PHP:      8.1
