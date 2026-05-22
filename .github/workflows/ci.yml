@@ -45,17 +45,6 @@ jobs:
       - name: PHPUnit
         run: composer phpunit
 
-      # Guards against hand-edits to readme.txt's derived sections.
-      # CHANGELOG.md (managed by release-please) is the source of truth for
-      # the == Changelog == block; the PHP Version: header (also bumped by
-      # release-please) is the source of truth for Stable tag. Both sync
-      # scripts regenerate readme.txt; if anything drifts, fail with a diff.
-      - name: Verify readme.txt is in sync
-        run: |
-          bin/sync-readme-changelog.sh
-          bin/sync-readme-version.sh
-          git diff --exit-code readme.txt
-
   js:
     name: JS / TS
     runs-on: ubuntu-latest
@@ -91,6 +80,18 @@ jobs:
 
       - name: Install npm dependencies
         run: npm ci
+
+      # Guards against hand-edits to readme.txt's derived sections.
+      # CHANGELOG.md (managed by release-please) is the source of truth for
+      # the == Changelog == block; the PHP Version: header (also bumped by
+      # release-please) is the source of truth for Stable tag. The CLI
+      # regenerates readme.txt from both; if anything drifts, fail on diff.
+      # Lives on the JS job because bin/cli/index.mts needs Node.
+      - name: Verify readme.txt is in sync
+        run: |
+          node bin/cli/index.mts sync-changelog
+          node bin/cli/index.mts sync-version
+          git diff --exit-code readme.txt
 
       - name: Lint JS / TS
         run: npm run lint:js

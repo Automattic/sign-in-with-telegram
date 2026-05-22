@@ -13,8 +13,15 @@
 		"noEmit": true,
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
-		"types": [ "jest" ]
+		"allowImportingTsExtensions": true,
+		"types": ["jest", "node"]
 	},
-	"include": [ "routes/**/*", "packages/*/src/**/*" ],
-	"exclude": [ "node_modules", "build", "build-module", "packages/*/build", "packages/*/build-module" ]
+	"include": ["routes/**/*", "packages/*/src/**/*", "bin/**/*.mts"],
+	"exclude": [
+		"node_modules",
+		"build",
+		"build-module",
+		"packages/*/build",
+		"packages/*/build-module"
+	]
 }
