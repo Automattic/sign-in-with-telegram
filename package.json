@@ -60,6 +60,7 @@
 		"@eslint/js": "9.39.4",
 		"@types/jest": "^30.0.0",
 		"@types/react": "^18.3.27",
+		"@types/node": "^24.12.4",
 		"@types/wordpress__block-editor": "^15.0.6",
 		"@types/wordpress__blocks": "^15.10.2",
 		"@wordpress/env": "^11.5.0",
