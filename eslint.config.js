@@ -14,12 +14,33 @@ module.exports = [
 	{
 		// eslint-import-resolver-typescript@4 trips on TypeScript 6's API
 		// surface ("invalid interface loaded as resolver") and surfaces the
-		// failure on every import/* rule that touches the resolver.
-		// Disabling the two affected rules; tsc does the real import
-		// validation anyway.
+		// failure on every import/* rule that consults the resolver.
+		// Disable the affected rules; tsc — and, for bin/, Node itself at
+		// runtime — do the real import validation.
 		rules: {
 			'import/no-extraneous-dependencies': 'off',
 			'import/no-duplicates': 'off',
+			'import/no-unresolved': 'off',
+			'import/named': 'off',
+		},
+	},
+	{
+		// TypeScript already carries parameter types in the signature, so
+		// JSDoc shouldn't duplicate them. @wordpress/eslint-plugin disables
+		// this for *.ts/*.tsx but not *.mts/*.cts — cover every TS extension.
+		files: ['**/*.{ts,tsx,mts,cts}'],
+		rules: {
+			'jsdoc/require-param-type': 'off',
+		},
+	},
+	{
+		// bin/ holds standalone Node maintenance scripts — the bin/cli/
+		// maintenance CLI and setup-agent.mts, run directly by Node 24 via
+		// type-stripping. Console output is their interface, so no-console
+		// doesn't apply.
+		files: ['bin/**'],
+		rules: {
+			'no-console': 'off',
 		},
 	},
 	{

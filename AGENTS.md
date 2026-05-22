@@ -41,6 +41,8 @@ sign-in-with-telegram/
       stage.tsx              # React content for the route.
   bin/
     postbuild-shim-boot.cjs  # CRITICAL — see "wp-build pages gotcha" below.
+    cli/                     # Repo-maintenance CLI — index.mts (dispatch) + per-command modules. TS, run via Node 24 type-stripping.
+    setup-agent.mts          # Installs per-agent slash-command shims. TS, run via Node 24 type-stripping.
   build/                     # GITIGNORED. Produced by `npm run build`.
   vendor/                    # GITIGNORED. Produced by `composer install`.
   tests/php/                 # PHPUnit tests (Brain Monkey for stubbing WP).

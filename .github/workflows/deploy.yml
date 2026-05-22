@@ -93,7 +93,7 @@ jobs:
       # build against, and it's still useful to produce the zip artifact.
       - name: Verify Version / Stable tag / release tag agreement
         if: steps.tag.outputs.name != ''
-        run: bin/verify-version-agreement.sh "${{ steps.tag.outputs.name }}"
+        run: node bin/cli/index.mts verify-version "${{ steps.tag.outputs.name }}"
 
       # Stage a clean mirror filtered by .distignore — same recipe as
       # plugin-check.yml — and zip it under the slug directory so the archive

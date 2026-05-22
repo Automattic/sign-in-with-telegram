@@ -38,11 +38,18 @@ jobs:
           token: ${{ secrets.API_TOKEN_GITHUB }}
           persist-credentials: true
 
+      # bin/cli/index.mts is TypeScript run via Node 24's native type-stripping.
+      - name: Set up Node
+        if: steps.release.outputs.pr
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '24'
+
       - name: Sync readme.txt from CHANGELOG.md and PHP Version header
         if: steps.release.outputs.pr
         run: |
-          bin/sync-readme-changelog.sh
-          bin/sync-readme-version.sh
+          node bin/cli/index.mts sync-changelog
+          node bin/cli/index.mts sync-version
           if ! git diff --quiet readme.txt; then
             git config user.name  'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

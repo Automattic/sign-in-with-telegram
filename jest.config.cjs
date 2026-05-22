@@ -18,9 +18,9 @@ module.exports = {
 				// ts-jest forces `module: commonjs` for the Jest runtime,
 				// which falls back to TypeScript's legacy node10 module
 				// resolution. TS 6 deprecates node10; silence the warning.
-				diagnostics: { ignoreCodes: [ 5107 ] },
+				diagnostics: { ignoreCodes: [5107] },
 			},
 		],
 	},
-	moduleFileExtensions: [ 'ts', 'tsx', 'js', 'jsx', 'json' ],
+	moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
 };
