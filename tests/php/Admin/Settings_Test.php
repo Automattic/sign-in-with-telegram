@@ -50,8 +50,24 @@ final class Settings_Test extends TestCase {
 		Monkey\setUp();
 
 		$this->roles                  = array(
-			'subscriber' => array( 'name' => 'Subscriber' ),
-			'editor'     => array( 'name' => 'Editor' ),
+			'subscriber'    => array(
+				'name'         => 'Subscriber',
+				'capabilities' => array( 'read' => true ),
+			),
+			'editor'        => array(
+				'name'         => 'Editor',
+				'capabilities' => array(
+					'edit_others_posts' => true,
+					'publish_pages'     => true,
+				),
+			),
+			'administrator' => array(
+				'name'         => 'Administrator',
+				'capabilities' => array(
+					'manage_options'  => true,
+					'install_plugins' => true,
+				),
+			),
 		);
 		$this->default_role           = 'subscriber';
 		$this->settings_option_exists = false;
@@ -228,6 +244,38 @@ final class Settings_Test extends TestCase {
 
 		$this->assertSame( 'placeholder', $sanitized['email_mode'] );
 		$this->assertSame( '', $sanitized['post_login_redirect'] );
+	}
+
+	public function test_schema_default_role_enum_excludes_privileged_roles(): void {
+		$schema = Settings::schema();
+		$enum   = $schema['properties']['default_role']['enum'];
+
+		$this->assertContains( 'subscriber', $enum );
+		$this->assertContains( 'editor', $enum );
+		$this->assertNotContains(
+			'administrator',
+			$enum,
+			'A role with site-administration capabilities must not be assignable to a self-registered user.'
+		);
+	}
+
+	public function test_get_default_role_returns_a_stored_non_privileged_role(): void {
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'default_role' => 'editor' );
+
+		$this->assertSame( 'editor', $settings->get_default_role() );
+	}
+
+	public function test_get_default_role_falls_back_when_the_stored_role_is_privileged(): void {
+		// A privileged role can still reach the option — set before the
+		// picker was restricted, or written straight to the database.
+		// get_default_role() must never hand it to a self-registered user.
+		$settings                     = new Settings();
+		$this->settings_option_exists = true;
+		$this->settings_option        = array( 'default_role' => 'administrator' );
+
+		$this->assertSame( 'subscriber', $settings->get_default_role() );
 	}
 
 	public function test_get_button_label_falls_back_to_default_when_unset(): void {

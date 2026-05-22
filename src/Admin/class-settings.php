@@ -43,6 +43,35 @@ class Settings {
 	private const EMAIL_MODES = array( 'none', 'placeholder' );
 
 	/**
+	 * Capabilities that mark a role as too privileged to hand to a user
+	 * who self-registered through a Telegram sign-in. A role carrying any
+	 * of these is excluded from the default-role picker so an anonymous
+	 * sign-up can never gain administrative control of the site. The list
+	 * targets site-administration powers — `administrator` (and any custom
+	 * admin-equivalent role) is filtered out; editor / author / contributor
+	 * / subscriber keep none of these and stay selectable.
+	 *
+	 * @var string[]
+	 */
+	private const PRIVILEGED_CAPABILITIES = array(
+		'manage_options',
+		'edit_users',
+		'create_users',
+		'delete_users',
+		'promote_users',
+		'activate_plugins',
+		'install_plugins',
+		'edit_plugins',
+		'install_themes',
+		'edit_themes',
+		'switch_themes',
+		'update_core',
+		'edit_files',
+		'import',
+		'export',
+	);
+
+	/**
 	 * Hook settings registration into WordPress.
 	 */
 	public function register(): void {
@@ -132,7 +161,7 @@ class Settings {
 				),
 				'default_role'        => array(
 					'type'    => 'string',
-					'enum'    => array_keys( self::roles() ),
+					'enum'    => array_keys( self::assignable_roles() ),
 					'default' => $default_role,
 				),
 				'allow_signups'       => array(
@@ -343,7 +372,13 @@ class Settings {
 	 * @return string
 	 */
 	public function get_default_role(): string {
-		return $this->get_setting_value( 'default_role' );
+		$role = (string) $this->get_setting_value( 'default_role' );
+
+		// Never hand a privileged role to a self-registered user, even if
+		// the stored option somehow holds one — set before the picker was
+		// restricted, or written straight to the database. Fall back to the
+		// safe default when the stored value isn't an assignable role.
+		return array_key_exists( $role, self::assignable_roles() ) ? $role : self::default_role();
 	}
 
 	/**
@@ -480,7 +515,7 @@ class Settings {
 	 * @return string
 	 */
 	private static function default_role(): string {
-		$roles = self::roles();
+		$roles = self::assignable_roles();
 		$role  = get_option( 'default_role', 'subscriber' );
 
 		if ( array_key_exists( $role, $roles ) ) {
@@ -497,5 +532,36 @@ class Settings {
 	 */
 	private static function roles(): array {
 		return wp_roles()->roles;
+	}
+
+	/**
+	 * Registered roles that are safe to assign to a user who self-registers
+	 * through a Telegram sign-in — every role except those carrying a
+	 * site-administration capability (see {@see self::PRIVILEGED_CAPABILITIES}).
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function assignable_roles(): array {
+		$assignable = array();
+
+		foreach ( self::roles() as $slug => $role ) {
+			$capabilities = ( is_array( $role ) && isset( $role['capabilities'] ) && is_array( $role['capabilities'] ) )
+				? $role['capabilities']
+				: array();
+
+			$privileged = false;
+			foreach ( self::PRIVILEGED_CAPABILITIES as $capability ) {
+				if ( ! empty( $capabilities[ $capability ] ) ) {
+					$privileged = true;
+					break;
+				}
+			}
+
+			if ( ! $privileged ) {
+				$assignable[ $slug ] = $role;
+			}
+		}
+
+		return $assignable;
 	}
 }

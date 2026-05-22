@@ -33,6 +33,16 @@ describe('buildFields', () => {
 		]);
 	});
 
+	it('does not offer the administrator role for new users', () => {
+		const fields = buildFields(ALL_UNSET);
+		const roleField = fields.find((f) => f.id === 'default_role');
+		const values = roleField?.elements?.map((e) => e.value) ?? [];
+
+		expect(values).toContain('subscriber');
+		expect(values).toContain('editor');
+		expect(values).not.toContain('administrator');
+	});
+
 	it('locks the client_id field when the source is a constant', () => {
 		const fields = buildFields(CLIENT_ID_CONSTANT);
 		const clientId = fields.find((f) => f.id === 'client_id');
