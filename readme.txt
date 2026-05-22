@@ -4,7 +4,7 @@ Tags: telegram, login, oidc, authentication, sign-in
 Requires at least: 6.8
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,10 @@ What is sent, and when:
 This service is provided by Telegram. Refer to Telegram's [Terms of Service](https://telegram.org/tos) and [Privacy Policy](https://telegram.org/privacy) for details on how Telegram handles the sign-in.
 
 == Changelog ==
+
+= 0.1.2 =
+
+* harden self-registration role and refresh dependencies (#22) (0672235)
 
 = 0.1.1 =
 
