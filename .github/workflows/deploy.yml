@@ -13,6 +13,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to verify + name the zip after (optional; blank = build the zip only, no version check)'
+        required: false
+        default: ''
 
 # Default-deny all permissions; the job grants only what it needs.
 permissions: {}
@@ -56,16 +61,27 @@ jobs:
       - name: Build assets
         run: npm run build
 
-      # On a `release` event the tag is on the event payload; on a manual
-      # `workflow_dispatch` run it's whatever ref the run was started from.
+      # On a `release` event the tag comes from the event payload. On a
+      # manual `workflow_dispatch` run it comes from the optional `tag`
+      # input — NOT github.ref_name, which would be a branch name and make
+      # the version check below compare e.g. "trunk" against "0.1.0".
+      # `artifact` is a non-empty name for the workflow artifact even when
+      # no tag is given (falls back to the short commit SHA).
       - name: Resolve release tag
         id: tag
         run: |
-          tag='${{ github.event.release.tag_name }}'
-          [[ -n "$tag" ]] || tag='${{ github.ref_name }}'
+          tag='${{ github.event.release.tag_name }}${{ inputs.tag }}'
           echo "name=$tag" >> "$GITHUB_OUTPUT"
+          if [[ -n "$tag" ]]; then
+            echo "artifact=sign-in-with-telegram-$tag" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact=sign-in-with-telegram-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
 
+      # Skipped on a manual run with no tag — there's nothing to check the
+      # build against, and it's still useful to produce the zip artifact.
       - name: Verify Version / Stable tag / release tag agreement
+        if: steps.tag.outputs.name != ''
         run: bin/verify-version-agreement.sh "${{ steps.tag.outputs.name }}"
 
       # Stage a clean mirror filtered by .distignore — same recipe as
@@ -94,7 +110,7 @@ jobs:
       - name: Upload the zip as a workflow artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
-          name: sign-in-with-telegram-${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.artifact }}
           path: .dist/sign-in-with-telegram.zip
           if-no-files-found: error
 
