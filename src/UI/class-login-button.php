@@ -112,8 +112,8 @@ class Login_Button {
 		wp_enqueue_style( $handle );
 		wp_add_inline_style(
 			$handle,
-			'#login form p.sign-in-with-telegram-login-form-button{margin-top:1em;margin-bottom:1em;}'
-			. '#login form .sign-in-with-telegram-login-form-button .sign-in-with-telegram-login-button{display:inline-flex;align-items:center;gap:0.25em;}'
+			'#login form p.sign-in-with-telegram-login-form-button{margin-top:1.25rem;margin-bottom:2rem;}'
+			. '#login form .sign-in-with-telegram-login-form-button .sign-in-with-telegram-login-button{display:flex;width:100%;justify-content:center;align-items:center;gap:0.25em;}'
 		);
 	}
 
