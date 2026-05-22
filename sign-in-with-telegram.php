@@ -20,6 +20,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
+define( 'TELEGRAM_SIGNIN_VERSION', '0.1.2' ); // x-release-please-version.
+
 /**
  * Plugin entry point. Loads the Composer autoloader and the build registry,
  * then bootstraps the plugin. If either dependency hasn't been installed yet

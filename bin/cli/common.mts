@@ -52,3 +52,15 @@ export function extractStableTag(readme: string): string | null {
 	const match = readme.match(/^Stable tag:[ \t]*([^\s]+)/m);
 	return match ? match[1] : null;
 }
+
+/**
+ * Extract the `TELEGRAM_SIGNIN_VERSION` constant value from the main PHP file.
+ *
+ * @param php The plugin PHP file's contents.
+ */
+export function extractVersionConstant(php: string): string | null {
+	const match = php.match(
+		/define\(\s*'TELEGRAM_SIGNIN_VERSION'\s*,\s*'([^']+)'\s*\)/
+	);
+	return match ? match[1] : null;
+}
