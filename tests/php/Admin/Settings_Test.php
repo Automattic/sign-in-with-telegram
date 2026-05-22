@@ -285,6 +285,51 @@ final class Settings_Test extends TestCase {
 		);
 	}
 
+	public function test_capability_explicitly_set_to_false_does_not_make_a_role_privileged(): void {
+		// A role may map a capability to false to revoke it. Only granted
+		// (truthy) capabilities count — a revoked one must not exclude the role.
+		$this->roles['revoked_admin'] = array(
+			'name'         => 'Revoked Admin',
+			'capabilities' => array(
+				'read'           => true,
+				'manage_options' => false,
+			),
+		);
+
+		$enum = Settings::schema()['properties']['default_role']['enum'];
+
+		$this->assertContains( 'revoked_admin', $enum );
+	}
+
+	public function test_ceiling_falls_back_to_a_lower_role_when_editor_is_unregistered(): void {
+		// With `editor` gone, the ceiling drops to the next built-in present
+		// (here `subscriber`), so anything above it is excluded — fail-safe.
+		unset( $this->roles['editor'] );
+
+		$enum = Settings::schema()['properties']['default_role']['enum'];
+
+		$this->assertContains( 'subscriber', $enum );
+		$this->assertNotContains( 'administrator', $enum );
+		$this->assertNotContains( 'plugin_updater', $enum );
+	}
+
+	public function test_no_reference_role_excludes_privileged_roles_rather_than_failing_open(): void {
+		// If a site has removed every built-in reference role, the ceiling is
+		// empty — a privileged role is still excluded (fail-safe, not open),
+		// and get_default_role() still resolves to the safe subscriber slug.
+		$this->roles = array(
+			'administrator' => array(
+				'name'         => 'Administrator',
+				'capabilities' => array( 'manage_options' => true ),
+			),
+		);
+
+		$enum = Settings::schema()['properties']['default_role']['enum'];
+
+		$this->assertNotContains( 'administrator', $enum );
+		$this->assertSame( 'subscriber', ( new Settings() )->get_default_role() );
+	}
+
 	public function test_get_default_role_returns_a_stored_non_privileged_role(): void {
 		$settings                     = new Settings();
 		$this->settings_option_exists = true;

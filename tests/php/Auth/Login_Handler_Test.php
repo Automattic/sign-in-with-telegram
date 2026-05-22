@@ -168,6 +168,63 @@ final class Login_Handler_Test extends TestCase {
 		$this->assertSame( 'subscriber', $inserted['role'] );
 	}
 
+	public function test_resolve_user_never_creates_an_account_with_a_privileged_stored_role(): void {
+		// A privileged role stored in the option — e.g. set before the role
+		// picker was restricted — must never reach wp_insert_user(). This is
+		// the sink-level proof that get_default_role()'s fallback protects
+		// create_user_from_claims().
+		Functions\when( 'get_option' )->alias(
+			static fn( string $key, $default = false ) => match ( $key ) {
+				'telegram_signin_settings' => array( 'default_role' => 'administrator' ),
+				'default_role'             => 'subscriber',
+				default                    => $default,
+			}
+		);
+		Functions\when( 'wp_roles' )->justReturn(
+			(object) array(
+				'roles' => array(
+					'subscriber'    => array( 'capabilities' => array( 'read' => true ) ),
+					'editor'        => array(
+						'capabilities' => array(
+							'read'              => true,
+							'edit_others_posts' => true,
+							'publish_pages'     => true,
+						),
+					),
+					'administrator' => array(
+						'capabilities' => array(
+							'read'           => true,
+							'manage_options' => true,
+						),
+					),
+				),
+			)
+		);
+		Functions\when( 'get_users' )->justReturn( array() );
+		Functions\when( 'username_exists' )->justReturn( false );
+		Functions\when( 'wp_generate_password' )->justReturn( 'random-password' );
+
+		$inserted = null;
+		Functions\when( 'wp_insert_user' )->alias(
+			function ( array $args ) use ( &$inserted ) {
+				$inserted = $args;
+				return 51;
+			}
+		);
+		$created     = new \WP_User();
+		$created->ID = 51; // phpcs:ignore Squiz.NamingConventions.ValidVariableName
+		Functions\when( 'get_user_by' )->justReturn( $created );
+
+		$this->make_handler()->resolve_user( self::valid_claims(), self::consumed() );
+
+		$this->assertNotNull( $inserted );
+		$this->assertSame(
+			'subscriber',
+			$inserted['role'],
+			'A privileged stored default_role must never reach wp_insert_user().'
+		);
+	}
+
 	public function test_resolve_user_yields_signup_disabled_when_plugin_signups_are_disabled(): void {
 		Functions\when( 'get_users' )->justReturn( array() );
 		Functions\when( 'get_option' )->alias(
