@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/Automattic/sign-in-with-telegram/compare/v0.1.2...v0.1.3) (2026-05-22)
+
+
+### Bug Fixes
+
+* add a TELEGRAM_SIGNIN_VERSION constant ([#26](https://github.com/Automattic/sign-in-with-telegram/issues/26)) ([e4b898f](https://github.com/Automattic/sign-in-with-telegram/commit/e4b898f649875deade34555981239a90b5b11f3a))
+
 ## [0.1.2](https://github.com/Automattic/sign-in-with-telegram/compare/v0.1.1...v0.1.2) (2026-05-22)
 
 

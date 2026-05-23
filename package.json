@@ -1,6 +1,6 @@
 {
 	"name": "sign-in-with-telegram",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Let your visitors sign in to WordPress with their Telegram account.",
 	"private": true,
 	"license": "GPL-2.0-or-later",
