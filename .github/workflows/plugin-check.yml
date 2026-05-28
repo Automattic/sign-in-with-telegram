@@ -70,3 +70,10 @@ jobs:
         uses: WordPress/plugin-check-action@6f5a57e173c065a394b78688f75df543e4011902  # v1
         with:
           build-dir: .dist/sign-in-with-telegram
+          # @wordpress/build emits a function_exists()-guarded
+          # wp_enqueue_command_palette_assets() call in the generated
+          # page.php. Plugin Check's static analysis doesn't recognize the
+          # guard, so it flags the call as requiring WP 6.9 even though
+          # the runtime path is safe on WP 6.8. WPCS still covers our own
+          # code in src/, so drop just this rule rather than the file.
+          ignore-codes: wp_function_not_compatible_with_requires_wp
