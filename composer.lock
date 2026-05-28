@@ -72,16 +72,16 @@
         },
         {
             "name": "automattic/jetpack-wp-build-polyfills",
-            "version": "v0.1.9",
+            "version": "v0.1.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Automattic/jetpack-wp-build-polyfills.git",
-                "reference": "eb83b97e7c54b8c5c0e654cd149c90c9a160f9ad"
+                "reference": "b82395b84f79f4872505e750d7e483c106bc8f8e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Automattic/jetpack-wp-build-polyfills/zipball/eb83b97e7c54b8c5c0e654cd149c90c9a160f9ad",
-                "reference": "eb83b97e7c54b8c5c0e654cd149c90c9a160f9ad",
+                "url": "https://api.github.com/repos/Automattic/jetpack-wp-build-polyfills/zipball/b82395b84f79f4872505e750d7e483c106bc8f8e",
+                "reference": "b82395b84f79f4872505e750d7e483c106bc8f8e",
                 "shasum": ""
             },
             "require": {
@@ -115,9 +115,9 @@
             ],
             "description": "Polyfills for WordPress Core packages not available in WP < 7.0",
             "support": {
-                "source": "https://github.com/Automattic/jetpack-wp-build-polyfills/tree/v0.1.9"
+                "source": "https://github.com/Automattic/jetpack-wp-build-polyfills/tree/v0.1.10"
             },
-            "time": "2026-05-19T09:18:41+00:00"
+            "time": "2026-05-25T14:12:09+00:00"
         },
         {
             "name": "firebase/php-jwt",
