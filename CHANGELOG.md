@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/Automattic/sign-in-with-telegram/compare/v0.1.3...v0.1.4) (2026-06-01)
+
+
+### Bug Fixes
+
+* improve settings descriptions and plugin overview ([#30](https://github.com/Automattic/sign-in-with-telegram/issues/30)) ([14bcd02](https://github.com/Automattic/sign-in-with-telegram/commit/14bcd02a077121b8333ea433b6ce2757a5448b05))
+
 ## [0.1.3](https://github.com/Automattic/sign-in-with-telegram/compare/v0.1.2...v0.1.3) (2026-05-22)
 
 
