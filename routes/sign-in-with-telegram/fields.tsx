@@ -39,7 +39,7 @@ const EMAIL_MODE_OPTIONS: ReadonlyArray<{
 		value: 'none',
 		label: __('No email', 'sign-in-with-telegram'),
 		description: __(
-			'New users are created without an email. Password recovery is unavailable until they set one themselves.',
+			'New accounts are created without an email address. Password recovery will not work until the user adds one to their profile.',
 			'sign-in-with-telegram'
 		),
 	},
@@ -47,7 +47,7 @@ const EMAIL_MODE_OPTIONS: ReadonlyArray<{
 		value: 'placeholder',
 		label: __('Placeholder email', 'sign-in-with-telegram'),
 		description: __(
-			'Synthesize a non-routable address like tg_<id>@users.noreply.<host>. Lets password-recovery flows technically run, but the addresses bounce.',
+			'Fill in a placeholder address like tg_<id>@users.noreply.<host>. The WordPress account looks complete, but password-recovery emails sent to this address will bounce.',
 			'sign-in-with-telegram'
 		),
 	},
@@ -151,7 +151,7 @@ export function buildFields(
 				label,
 			})),
 			description: __(
-				'Telegram does not share an email address. "No email" leaves the field blank — the user has to add one themselves before they can use password recovery. "Placeholder email" fills in an unreachable address like tg_user@users.noreply.example.com so the account looks complete to WordPress, but any recovery emails sent there will bounce.',
+				'Telegram does not share an email address. Choose how new accounts should handle that.',
 				'sign-in-with-telegram'
 			),
 		},
@@ -172,7 +172,7 @@ export function buildFields(
 			),
 			type: 'boolean',
 			description: __(
-				'Ask users to let your bot send them direct messages on Telegram. The plugin only records the consent, it does not send any messages.',
+				'Ask users to allow your bot to send them direct messages on Telegram. The plugin only records the permission — it does not send any messages itself.',
 				'sign-in-with-telegram'
 			),
 		},

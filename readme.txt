@@ -12,15 +12,15 @@ Add Telegram login to your WordPress site. Visitors sign in with their existing 
 
 == Description ==
 
-Sign in with Telegram lets visitors sign in to your WordPress site using their Telegram account, via [Telegram's OpenID Connect provider](https://core.telegram.org/bots/telegram-login). Unlike older Telegram-login plugins that embed Telegram's JavaScript "Login Widget", this plugin uses a standard server-side OIDC redirect flow — no third-party scripts on your pages, no widget cookies, works in any browser including those with strict privacy and tracker-blocking settings.
+Sign in with Telegram lets your visitors log in with their Telegram account — no extra password to remember, no new account to create. Unlike older Telegram-login plugins that rely on a script embedded from Telegram (which modern privacy-focused browsers often block), this plugin uses [Telegram's standard OpenID Connect login](https://core.telegram.org/bots/telegram-login): a secure redirect to Telegram and back. It works reliably in every browser, including ones with strict tracker blocking turned on.
 
 = Features =
 
 * **"Sign in with Telegram" button** on the standard `wp-login.php` screen, as a `[telegram_signin_button]` shortcode anywhere on your site, or as a Block Editor block.
 * **Account linking** from the user profile screen — existing WordPress users can connect or disconnect their Telegram account.
 * **Profile sync** — display name and avatar from the user's Telegram profile flow through to the WordPress profile automatically.
-* **No email-based account merging** — the only path from a Telegram identity to an existing WordPress user is an explicit, click-through link from a logged-in session, which closes the door on the classic SSO account-takeover bug.
-* **Modern OIDC** — Authorization Code + PKCE (S256), state and nonce protection, JWKS key rotation handled correctly, RS256-only signature verification.
+* **No automatic account merging** — a Telegram identity can only attach to an existing WordPress user through an explicit click-to-link action from a logged-in session, so a stranger who happens to share an email address can never take over an account.
+* **Secure by default** — uses the same kind of modern, signed redirect flow that "Sign in with Google" and "Sign in with Apple" use. No shared bot-token secret on your server, no manual key rotation.
 * **Settings page** in wp-admin where you paste the bot's Client ID + Client Secret, pick the default role for new users, and optionally collect the visitor's verified phone number or request permission for your bot to message them directly.
 
 = How it compares to the legacy Login Widget =
