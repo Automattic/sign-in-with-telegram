@@ -1,25 +1,21 @@
 name: Deploy
 
-# Publishes a release of the plugin.
+# Publishes a release of the plugin:
+# 1. Builds the .distignore-filtered production zip.
+# 2. On a `release: published` event, attaches the zip to the Release.
+# 3. When a tag is in scope, deploys to the wp.org SVN repo via the 10up
+#    action, which also picks up .wordpress-org/ assets (banner, icon,
+#    screenshots) automatically.
 #
-# What runs today: on a published GitHub Release, build the production
-# artifact and attach a .distignore-filtered zip to the Release.
+# Triggers:
+# - `release: published` — full deploy.
+# - `workflow_dispatch` with a tag input — verify + deploy, and uploads a
+#   workflow artifact. Without a tag, builds the zip only, useful for
+#   smoke-testing the workflow without pushing to wp.org.
 #
-# What's deferred: the wp.org SVN deploy. The plugin is still in wp.org
-# review, so the `sign-in-with-telegram` SVN repo doesn't exist yet — and
-# the 10up deploy action svn-checks-out that repo before doing anything
-# (even with dry-run), so it can't run until the plugin is approved. The
-# step is stubbed, commented out, at the bottom of this file.
-#
-# TO ENABLE THE wp.org SVN DEPLOY (once the plugin is approved):
-#   1. Confirm the slug is provisioned — i.e. the SVN repo exists at
-#      https://plugins.svn.wordpress.org/sign-in-with-telegram/
-#   2. Add two repository secrets, WPORG_SVN_USERNAME and
-#      WPORG_SVN_PASSWORD — a wp.org account with commit access to the
-#      plugin.
-#   3. Uncomment the "Deploy to wp.org" step at the bottom of this file.
-# The .wordpress-org/ assets (banner, icon, screenshots) are already in
-# the repo; the 10up action picks them up from there automatically.
+# Required repository secrets for the wp.org SVN step:
+#   SVN_USERNAME, SVN_PASSWORD — a wp.org account with commit access to
+#   the sign-in-with-telegram plugin.
 on:
   release:
     types: [published]
@@ -125,14 +121,13 @@ jobs:
           path: .dist/sign-in-with-telegram.zip
           if-no-files-found: error
 
-      # --- wp.org SVN deploy — NOT YET ENABLED -----------------------------
-      # Step 3 of the enablement checklist at the top of this file:
-      # uncomment this step once the plugin is approved and the
-      # WPORG_SVN_USERNAME / WPORG_SVN_PASSWORD secrets are set.
-      #
-      # - name: Deploy to wp.org
-      #   uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2  # stable
-      #   env:
-      #     SVN_USERNAME: ${{ secrets.WPORG_SVN_USERNAME }}
-      #     SVN_PASSWORD: ${{ secrets.WPORG_SVN_PASSWORD }}
-      #     SLUG: sign-in-with-telegram
+      # Gated on a tag being in scope so workflow_dispatch runs without a
+      # tag still produce a build artifact for smoke-testing without
+      # pushing anything to wp.org.
+      - name: Deploy to wp.org
+        if: steps.tag.outputs.name != ''
+        uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2  # stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: sign-in-with-telegram
