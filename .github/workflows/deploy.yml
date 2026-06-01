@@ -79,6 +79,11 @@ jobs:
         run: |
           tag='${{ github.event.release.tag_name }}${{ inputs.tag }}'
           echo "name=$tag" >> "$GITHUB_OUTPUT"
+          # 10up's deploy action falls back to ${GITHUB_REF#refs/tags/}, which
+          # on a workflow_dispatch run leaves `refs/heads/<branch>` intact and
+          # blows up `svn cp` with E155010. Always pass VERSION explicitly,
+          # stripped of any leading `v`.
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
           if [[ -n "$tag" ]]; then
             echo "artifact=sign-in-with-telegram-$tag" >> "$GITHUB_OUTPUT"
           else
@@ -131,3 +136,4 @@ jobs:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
           SLUG: sign-in-with-telegram
+          VERSION: ${{ steps.tag.outputs.version }}
