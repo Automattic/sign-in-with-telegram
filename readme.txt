@@ -4,7 +4,7 @@ Tags: telegram, login, oidc, authentication, sign-in
 Requires at least: 6.8
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -94,8 +94,8 @@ This service is provided by Telegram. Refer to Telegram's [Terms of Service](htt
 
 == Changelog ==
 
-= 0.1.4 =
+= 0.1.5 =
 
-* Improve settings descriptions and plugin overview.
+* Ship block.json so the editor block registers on wp.org installs.
 
 For the full version history, see [the changelog on GitHub](https://github.com/Automattic/sign-in-with-telegram/blob/trunk/CHANGELOG.md).

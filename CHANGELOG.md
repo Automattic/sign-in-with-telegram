@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/Automattic/sign-in-with-telegram/compare/v0.1.4...v0.1.5) (2026-06-02)
+
+
+### Bug Fixes
+
+* ship block.json so the editor block registers on wp.org installs ([#32](https://github.com/Automattic/sign-in-with-telegram/issues/32)) ([87bcac8](https://github.com/Automattic/sign-in-with-telegram/commit/87bcac8b0e671f75a9e206e3b1b935c10e8baf82))
+
 ## [0.1.4](https://github.com/Automattic/sign-in-with-telegram/compare/v0.1.3...v0.1.4) (2026-06-01)
 
 
