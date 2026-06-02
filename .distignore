@@ -42,7 +42,11 @@
 # fixtures (e.g. firebase/php-jwt's tests/) that don't belong in the
 # user-facing zip.
 /bin
-/packages
+# Per-package src/ stays out, but the top-level block.json metadata
+# each package contributes ships — register_block_type() reads it at
+# runtime (see Login_Button_Block::register_block).
+/packages/*/src
+/packages/*/package.json
 /routes
 docs
 examples
